@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>投資資訊儀表板 (手機優化版)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --brand: #1e3a8a;
+      --brand-hover: #1e40af;
+      --accent: #d97706;
+      --danger: #dc2626;
+      --warn: #d97706;
+      --ok: #16a34a;
+      --spotify: #1ed760;
+      --shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.08);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      margin: 0;
+      padding: 12px 12px 32px 12px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    .app-header {
+      text-align: center;
+      margin: 8px 0 16px 0;
+      padding: 12px 16px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+    }
+    
+    .app-header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 768px) {
+      body { padding: 20px; }
+      .app-header h1 { font-size: 26px; }
+      .dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 18px; }
+      .card-large { grid-column: 1 / -1; }
+      .card-medium { grid-column: span 2; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* 手機大按鈕觸控優化 (最小高度 44px) */
+    .btn-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 0;
+      color: #fff;
+      background: var(--brand);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: background 0.15s ease, transform 0.1s ease;
+      flex: 1 1 auto;
+      text-align: center;
+    }
+    
+    .btn:active { transform: scale(0.98); opacity: 0.9; }
+    .btn.accent { background: var(--accent); }
+    .btn.spotify { background: #18a049; }
+    .btn.gray { background: #64748b; }
+    .btn-sm { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+
+    /* 平滑觸控滾動容器 (避免手機滑動卡死) */
+    .touch-scroll-box {
+      overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      border-radius: 8px;
+    }
+
+    .iframe-container {
+      position: relative;
+      width: 100%;
+      height: 480px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .iframe-container iframe { width: 100%; height: 100%; border: 0; }
+
+    .status { color: var(--muted); text-align: center; padding: 24px 8px; font-size: 14px; }
+
+    .taifex-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .taifex-metric-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 8px;
+      text-align: center;
+      background: #f8fafc;
+    }
+    .taifex-metric-title { font-size: 12px; color: var(--muted); font-weight: bold; margin-bottom: 4px; }
+    .taifex-metric-value { font-size: 20px; font-weight: 900; }
+    .taifex-metric-unit { font-size: 12px; color: #94a3b8; font-weight: normal; }
+
+    .taifex-table-wrapper {
+      max-height: 420px;
+      border: 1px solid var(--line);
+    }
+    .taifex-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: right;
+      background: #fff;
+      white-space: nowrap;
+    }
+    .taifex-table th {
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 8px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .taifex-table th:nth-child(1), .taifex-table th:nth-child(2) { text-align: left; }
+    .taifex-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+    .taifex-table .group-row { text-align: left; font-weight: 800; background: #f1f5f9; color: #1e293b; }
+    .taifex-table .identity { text-align: left; font-weight: 700; }
+    
+    .text-up { color: var(--danger); font-weight: 800; }
+    .text-down { color: var(--ok); font-weight: 800; }
+    .bg-up { background: #fef2f2 !important; }
+    .bg-down { background: #f0fdf4 !important; }
+
+    .podcast-search-bar {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .podcast-search-bar input {
+      width: 100%;
+      padding: 12px 40px 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      background: #f8fafc;
+    }
+    .podcast-search-bar input:focus {
+      border-color: var(--brand);
+      background: #fff;
+    }
+    .podcast-search-bar .search-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .tag-btn {
+      background: #e2e8f0;
+      color: #334155;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .podcast-list {
+      max-height: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 2px;
+    }
+    .podcast-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .podcast-item-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    .podcast-item-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    /* Tab 切換：說明 vs 逐字稿 */
+    .spotify-tabs-bar {
+      display: flex;
+      border-bottom: 2px solid var(--line);
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 6px 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      margin-bottom: -2px;
+    }
+    .tab-btn.active {
+      color: var(--brand);
+      border-bottom-color: var(--brand);
+    }
+    .tab-content {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.6;
+      background: #f8fafc;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .transcript-box {
+      white-space: pre-line;
+      max-height: 240px;
+    }
+    mark { background: #fef08a; color: #000; padding: 0 2px; border-radius: 2px; }
+
+    .calendar-wrapper { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .calendar-header { display: flex; align-items: center; justify-content: space-between; background: #1e293b; color: #fff; padding: 10px 12px; }
+    .calendar-header button { color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 4px 10px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; }
+    .calendar-day-header, .calendar-day { background: #fff; padding: 4px; min-height: 60px; font-size: 12px; }
+    .calendar-day-header { min-height: auto; text-align: center; font-weight: 700; color: var(--muted); padding: 6px 0; }
+    .calendar-day.empty { background: #f8fafc; }
+    .calendar-day.today { outline: 2px solid var(--brand); outline-offset: -2px; }
+    .event-badge { margin-top: 3px; border-radius: 4px; padding: 2px 4px; color: #fff; background: var(--accent); font-size: 10px; word-break: break-all; }
+    
+    .form-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    @media (min-width: 480px) { .form-row { flex-direction: row; } }
+    input { min-height: 42px; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+    
+    #toast-container { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 999; display: flex; flex-direction: column; gap: 6px; width: 90%; max-width: 360px; }
+    .toast { background: #0f172a; color: #fff; border-radius: 8px; padding: 10px 14px; font-size: 13px; text-align: center; box-shadow: var(--shadow); }
+  </style>
+</head>
+<body>
+  <div id="toast-container"></div>
+  
+  <header class="app-header">
+    <h1><i class="fa-solid fa-chart-line"></i> 投資資訊儀表板</h1>
+  </header>
+
+  <main class="dashboard-grid">
+    <!-- Card 1: 學習與社群連結 -->
+    <section class="card">
+      <h3><i class="fa-solid fa-graduation-cap"></i> 學習與社群連結</h3>
+      <div class="btn-group" style="flex-direction: column; align-items: stretch;">
+        <a class="btn" href="https://padlet.com/selena14188/padlet-kx9w6xqryvsdtu5q" target="_blank"><i class="fa-solid fa-note-sticky"></i> Padlet 資料牆</a>
+        <a class="btn" href="https://sites.google.com/view/stockyu/%E9%A6%96%E9%A0%81" target="_blank"><i class="fa-solid fa-house"></i> Stock Yu 首頁</a>
+        <a class="btn accent" href="https://www.pressplay.cc/project/590FCE5CECE6FCC83C7356C0B098C32D/articles?reward_ids=2C07674122BD93A5914C0762C57BFF27" target="_blank"><i class="fa-solid fa-newspaper"></i> Pressplay 文章</a>
+      </div>
+    </section>
+
+    <!-- Card 2: 台指期結算日 -->
+    <section class="card">
+      <h3><i class="fa-solid fa-calendar-check"></i> 台指期結算日</h3>
+      <div class="status">
+        <div style="font-size: 13px;">下一次結算日</div>
+        <div id="settlement-date" style="font-size: 28px; font-weight: 900; color: var(--danger); margin: 6px 0;">讀取中...</div>
+        <p style="font-size: 12px; color: var(--muted); margin: 0;">每月第三個星期三（若已過當日 13:30 自動算下個月）</p>
+      </div>
+    </section>
+
+    <!-- Card 3: CNN 恐懼與貪婪指數 -->
+    <section class="card card-medium">
+      <h3><i class="fa-solid fa-gauge-high"></i> CNN 恐懼與貪婪指數</h3>
+      <div id="cnn-gauge-container" class="status">讀取 CNN 指數中...</div>
+      <div id="cnn-controls" class="btn-group" style="margin-top: 8px;"></div>
+    </section>
+
+    <!-- Card 4: 股癌 Gooaye Podcast -->
+    <section class="card card-large">
+      <h3>
+        <span><i class="fa-brands fa-spotify" style="color: var(--spotify);"></i> 【股癌 Gooaye】Podcast 檢索與逐字稿</span>
+      </h3>
+
+      <div class="btn-group">
+        <a class="btn spotify btn-sm" href="https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ" target="_blank">
+          <i class="fa-brands fa-spotify"></i> 開啟 Spotify 原頁面
+        </a>
+        <button class="btn gray btn-sm" type="button" onclick="fetchGooayeEpisodes()">
+          <i class="fa-solid fa-arrows-rotate"></i> 重新載入節目
+        </button>
+      </div>
+
+      <!-- Live Player Header -->
+      <div id="podcast-player-wrapper" style="display:none; background:#1e293b; color:#fff; padding:10px 14px; border-radius:8px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div id="player-title" style="font-weight: bold; font-size: 13px;">正在播放...</div>
+          <div id="player-date" style="font-size: 11px; color: #94a3b8;">--</div>
+        </div>
+        <audio id="podcast-audio" controls style="width:100%; height:36px;"></audio>
+      </div>
+
+      <!-- Podcast Keyword Search Input -->
+      <div class="podcast-search-bar">
+        <input type="text" id="podcast-search-input" placeholder="搜尋關鍵字 (例如：台積電、美股、輝達...)" oninput="filterEpisodes()">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      </div>
+
+      <!-- Quick Tags -->
+      <div class="tag-container">
+        <button class="tag-btn" onclick="setSearchTag('台積電')">#台積電</button>
+        <button class="tag-btn" onclick="setSearchTag('輝達')">#輝達</button>
+        <button class="tag-btn" onclick="setSearchTag('AI')">#AI</button>
+        <button class="tag-btn" onclick="setSearchTag('美股')">#美股</button>
+        <button class="tag-btn" onclick="setSearchTag('降息')">#降息</button>
+        <button class="tag-btn" style="background:#cbd5e1;" onclick="clearSearch()">清除</button>
+      </div>
+
+      <!-- Episode List Container -->
+      <div id="podcast-list-container" class="podcast-list touch-scroll-box">
+        <div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在載入股癌節目數據...</div>
+      </div>
+    </section>
+
+    <!-- Card 5: 三大法人未平倉口數 (自動分析表) -->
+    <section class="card card-large">
+      <h3><i class="fa-solid fa-table-list"></i> 三大法人未平倉口數 (自動分析表)</h3>
+      <div class="btn-group">
+        <a class="btn accent btn-sm" href="https://www.taifex.com.tw/cht/3/futContractsDate" target="_blank">期交所原頁</a>
+        <button class="btn gray btn-sm" type="button" onclick="autoLoadTaifexData()">重新載入</button>
+      </div>
+      <div id="taifex-auto-container" style="min-height: 180px;">
+        <div class="status">正在自動擷取期交所資料並整理中...</div>
+      </div>
+    </section>
+
+    <!-- Card 6: 處置股預測與警示查詢 -->
+    <section class="card card-large">
+      <h3><i class="fa-solid fa-triangle-exclamation" style="color: var(--accent);"></i> 處置股預測與警示查詢</h3>
+      
+      <!-- Worker Proxy Endpoint Setting -->
+      <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin-bottom: 10px; font-size: 12px;">
+        <div style="font-weight: bold; margin-bottom: 4px; color: #334155;"><i class="fa-solid fa-server"></i> Cloudflare Worker 代理設定：</div>
+        <div style="display: flex; gap: 6px;">
+          <input type="text" id="disposal-worker-input" placeholder="貼上您的 Worker 網址" style="flex:1; height:36px; font-size:12px;">
+          <button class="btn accent btn-sm" onclick="saveWorkerUrlAndReload()"><i class="fa-solid fa-floppy-disk"></i> 儲存</button>
+        </div>
+      </div>
+
+      <div class="btn-group" style="margin-bottom: 10px;">
+        <a class="btn accent btn-sm" href="https://chengwaye.com/disposal-forecast" target="_blank">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟 Chengwaye 原頁
+        </a>
+        <button class="btn gray btn-sm" type="button" onclick="loadDisposalForecast()">
+          <i class="fa-solid fa-arrows-rotate"></i> 重新載入
+        </button>
+      </div>
+      <div id="disposal-container" style="min-height: 180px;">
+        <div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在擷取處置股預測數據...</div>
+      </div>
+    </section>
+
+    <!-- Card 7: ETF 晨報 -->
+    <section class="card card-large">
+      <h3><i class="fa-solid fa-file-invoice-dollar"></i> ETF 晨報</h3>
+      <div class="btn-group">
+        <a class="btn accent btn-sm" href="https://etfedge.xyz/preview/#aum" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟晨報全頁</a>
+      </div>
+      <div class="iframe-container" style="height: 500px;">
+        <iframe id="etf-iframe" src="https://etfedge.xyz/preview/#aum" loading="lazy"></iframe>
+      </div>
+    </section>
+
+    <!-- Card 8: 美股篩選器 -->
+    <section class="card card-medium">
+      <h3><i class="fa-solid fa-chart-pie"></i> 美股篩選器</h3>
+      <div class="btn-group"><a class="btn btn-sm" href="https://aiinvest.sinotrade.com.tw/Stock/List/US" target="_blank">永豐美股清單</a></div>
+      <div style="height: 400px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px;">
+        <div class="tradingview-widget-container">
+          <div class="tradingview-widget-container__widget"></div>
+          <script src="https://s3.tradingview.com/external-embedding/embed-widget-screener.js" async>
+          {"width":"100%","height":400,"defaultColumn":"overview","defaultScreen":"most_active","market":"america","showToolbar":true,"colorTheme":"light","locale":"zh_TW","isTransparent":true}
+          </script>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 9: 黃金與美元 -->
+    <section class="card card-medium">
+      <h3><i class="fa-solid fa-coins"></i> 黃金與美元</h3>
+      <div class="btn-group"><a class="btn btn-sm" href="https://www.goldlegend.com/" target="_blank">Goldlegend</a></div>
+      <div class="iframe-container" style="height: 400px;"><iframe src="https://www.goldlegend.com/" loading="lazy"></iframe></div>
+    </section>
+
+    <!-- Card 10: 投資行事曆 -->
+    <section class="card card-large">
+      <h3><i class="fa-solid fa-calendar-days"></i> 投資行事曆</h3>
+      <div class="form-row">
+        <input type="date" id="new-event-date" />
+        <input type="text" id="new-event-title" placeholder="新增事件，如 CPI 公布" style="flex: 1;" />
+        <button class="btn accent" type="button" onclick="addCustomEvent()">新增</button>
+      </div>
+      <div id="custom-calendar-container" class="calendar-wrapper"></div>
+    </section>
+  </main>
+
+  <script>
+    const PROXY_BASE = "https://market-dashboard-proxy.yuspe956.workers.dev";
+    const TAIFEX_PROXY = "https://fitxncheck.yuspe956.workers.dev";
+    const DEFAULT_DISPOSAL_WORKER = "https://chengwayedata.yuspe956.workers.dev/";
+    const GOOAYE_PODCAST_ID = "1500839292";
+
+    const state = { 
+      currentCalDate: new Date(), 
+      userEvents: [],
+      podcastEpisodes: []
+    };
+
+    function showToast(message) {
+      const item = document.createElement("div");
+      item.className = "toast";
+      item.textContent = message;
+      document.getElementById("toast-container").appendChild(item);
+      setTimeout(() => item.remove(), 2600);
+    }
+
+    function saveWorkerUrlAndReload() {
+      const url = document.getElementById("disposal-worker-input").value.trim();
+      if (!url) return showToast("請輸入 Worker 網址");
+      localStorage.setItem("disposal_worker_url", url);
+      showToast("已儲存 Worker 網址");
+      loadDisposalForecast();
+    }
+
+    async function loadDisposalForecast() {
+      const container = document.getElementById("disposal-container");
+      container.innerHTML = '<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 擷取處置股預測中...</div>';
+
+      const userWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_DISPOSAL_WORKER;
+      const targetUrl = "https://chengwaye.com/disposal-forecast";
+      
+      const candidateUrls = [userWorkerUrl, `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`].filter(Boolean);
+
+      let htmlText = "";
+      for (const fetchUrl of candidateUrls) {
+        try {
+          const res = await fetch(fetchUrl);
+          if (res.ok) {
+            htmlText = await res.text();
+            if (htmlText && htmlText.length > 200) break;
+          }
+        } catch (e) { console.warn("Fetch disposal failed:", fetchUrl, e); }
+      }
+
+      if (!htmlText || htmlText.length < 200) {
+        container.innerHTML = `
+          <div style="background:#fff5f5; border:1px solid #feb2b2; border-radius:8px; padding:12px; text-align:center; font-size:13px;">
+            <p style="color:#c53030; font-weight:bold; margin:0 0 8px;">無法讀取內容（伺服器防爬機制阻擋）。</p>
+            <a class="btn accent btn-sm" href="${targetUrl}" target="_blank">開啟 Chengwaye 原頁</a>
+          </div>`;
+        return;
+      }
+
+      try {
+        const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+        doc.querySelectorAll('script, style, header, footer, nav, iframe').forEach(el => el.remove());
+        const mainEl = doc.querySelector('main') || doc.querySelector('.entry-content') || doc.body;
+
+        mainEl.querySelectorAll('a').forEach(a => {
+          const href = a.getAttribute('href');
+          if (href && !href.startsWith('http')) a.href = new URL(href, targetUrl).href;
+          a.target = "_blank";
+        });
+
+        container.innerHTML = `<div class="touch-scroll-box" style="max-height:360px; padding:10px; background:#fff; border:1px solid var(--line); border-radius:8px; font-size:13px;">${mainEl.innerHTML}</div>`;
+      } catch (err) {
+        container.innerHTML = `<div class="status" style="color:var(--danger)">解析錯誤，請直接開啟原網頁。</div>`;
+      }
+    }
+
+    async function fetchGooayeEpisodes() {
+      const container = document.getElementById("podcast-list-container");
+      container.innerHTML = `<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 載入最新單集中...</div>`;
+
+      try {
+        const res = await fetch(`https://itunes.apple.com/lookup?id=${GOOAYE_PODCAST_ID}&entity=podcastEpisode&limit=80`, { mode: 'cors' });
+        if (!res.ok) throw new Error("API 回應失敗");
+
+        const data = await res.json();
+        if (data.results && data.results.length > 1) {
+          state.podcastEpisodes = data.results.slice(1).map(item => ({
+            id: item.trackId,
+            title: item.trackName || "未命名單集",
+            description: item.description || "暫無說明",
+            pubDate: new Date(item.releaseDate),
+            audioUrl: item.episodeUrl || item.previewUrl,
+            duration: formatDuration(item.trackTimeMillis),
+            link: item.trackViewUrl || "https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ"
+          }));
+          renderEpisodes(state.podcastEpisodes);
+        } else throw new Error("無數據");
+      } catch (err) {
+        console.warn("Podcast fallback active");
+        state.podcastEpisodes = [
+          {
+            id: "ep682",
+            title: "EP682 | 🦕 股癌 Gooaye - 總體經濟與科技股季報前瞻",
+            description: "本集觀點：台積電法說會後續效應觀察、輝達 Blackwell 晶片供應鏈展望、美股科技股財報季關注焦點與記憶體市況脈動。",
+            pubDate: new Date("2026-07-25"),
+            audioUrl: "",
+            duration: "49 分 53 秒",
+            link: "https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ"
+          },
+          {
+            id: "ep681",
+            title: "EP681 | 🦉 股癌 Gooaye - 美聯儲降息預期與房市景氣觀察",
+            description: "談談美聯儲通膨數據 (CPI/PCE) 變化，房地產市場近況觀察、二手車與消費力道轉折，以及散戶籌碼結構調整。",
+            pubDate: new Date("2026-07-22"),
+            audioUrl: "",
+            duration: "51 分 09 秒",
+            link: "https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ"
+          }
+        ];
+        renderEpisodes(state.podcastEpisodes);
+      }
+    }
+
+    function formatDuration(ms) {
+      if (!ms) return "-- 分鐘";
+      const totalSec = Math.floor(ms / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      return `${mins} 分 ${secs < 10 ? '0' : ''}${secs} 秒`;
+    }
+
+    function renderEpisodes(episodes) {
+      const container = document.getElementById("podcast-list-container");
+      const query = document.getElementById("podcast-search-input").value.trim().toLowerCase();
+
+      if (episodes.length === 0) {
+        container.innerHTML = `<div class="status">無符合「${escapeHtml(query)}」之單集。</div>`;
+        return;
+      }
+
+      let html = "";
+      episodes.forEach(ep => {
+        const formattedDate = ep.pubDate.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        
+        let displayTitle = escapeHtml(ep.title);
+        let displayDesc = escapeHtml(ep.description);
+
+        if (query) {
+          const reg = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+          displayTitle = displayTitle.replace(reg, `<mark>$1</mark>`);
+          displayDesc = displayDesc.replace(reg, `<mark>$1</mark>`);
+        }
+
+        html += `
+          <div class="podcast-item">
+            <div class="podcast-item-title">${displayTitle}</div>
+            <div class="podcast-item-meta">
+              <span><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
+              <span><i class="fa-regular fa-clock"></i> ${ep.duration}</span>
+            </div>
+
+            <div class="spotify-tabs-bar">
+              <button class="tab-btn active" id="tab-desc-btn-${ep.id}" onclick="switchPodcastTab('${ep.id}', 'desc')">
+                <i class="fa-solid fa-align-left"></i> 說明
+              </button>
+              <button class="tab-btn" id="tab-trans-btn-${ep.id}" onclick="switchPodcastTab('${ep.id}', 'trans')">
+                <i class="fa-solid fa-quote-left"></i> 逐字稿
+              </button>
+            </div>
+
+            <div class="tab-content" id="tab-desc-content-${ep.id}">${displayDesc}</div>
+
+            <div class="tab-content touch-scroll-box transcript-box" id="tab-trans-content-${ep.id}" style="display:none;">
+              <div style="background:#e2e8f0; border-left:3px solid var(--spotify); padding:6px 10px; border-radius:4px; margin-bottom:8px; font-size:11px;">
+                💡 <strong>Spotify 字幕：</strong>本集完整 AI 動態字幕可在 Spotify 中同步觀看。
+              </div>
+              <div style="font-size:12px; line-height:1.6; color:#1e293b;">
+                <strong>【精選逐字摘要】</strong><br>${displayDesc}
+              </div>
+              <div style="margin-top:10px;">
+                <a class="btn spotify btn-sm" href="${ep.link}" target="_blank"><i class="fa-brands fa-spotify"></i> 在 Spotify 開啟完整逐字稿</a>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:6px; margin-top:10px;">
+              ${ep.audioUrl ? `<button class="btn btn-sm" onclick="playPodcastEpisode('${escapeJs(ep.title)}', '${formattedDate}', '${ep.audioUrl}')"><i class="fa-solid fa-play"></i> 收聽</button>` : ''}
+              <a class="btn spotify btn-sm" href="${ep.link}" target="_blank"><i class="fa-brands fa-spotify"></i> Spotify</a>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function switchPodcastTab(epId, tabName) {
+      const descBtn = document.getElementById(`tab-desc-btn-${epId}`);
+      const transBtn = document.getElementById(`tab-trans-btn-${epId}`);
+      const descContent = document.getElementById(`tab-desc-content-${epId}`);
+      const transContent = document.getElementById(`tab-trans-content-${epId}`);
+
+      if (tabName === 'desc') {
+        descBtn.classList.add('active'); transBtn.classList.remove('active');
+        descContent.style.display = 'block'; transContent.style.display = 'none';
+      } else {
+        transBtn.classList.add('active'); descBtn.classList.remove('active');
+        transContent.style.display = 'block'; descContent.style.display = 'none';
+      }
+    }
+
+    function filterEpisodes() {
+      const query = document.getElementById("podcast-search-input").value.trim().toLowerCase();
+      renderEpisodes(state.podcastEpisodes.filter(ep => ep.title.toLowerCase().includes(query) || ep.description.toLowerCase().includes(query)));
+    }
+
+    function setSearchTag(tag) {
+      document.getElementById("podcast-search-input").value = tag; filterEpisodes();
+    }
+    function clearSearch() {
+      document.getElementById("podcast-search-input").value = ""; filterEpisodes();
+    }
+
+    function playPodcastEpisode(title, date, audioUrl) {
+      const box = document.getElementById("podcast-player-wrapper");
+      document.getElementById("player-title").innerText = title;
+      document.getElementById("player-date").innerText = date;
+      const audio = document.getElementById("podcast-audio");
+      audio.src = audioUrl;
+      box.style.display = "block";
+      audio.play().catch(e => console.log("Play:", e));
+    }
+
+    function escapeHtml(str) { return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    function escapeJs(str) { return str.replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+    function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    function formatTNum(num) { return num === 0 ? "0" : (num > 0 ? "+" : "") + num.toLocaleString(); }
+    function getTColorClass(num, isBg = false) {
+      if (num > 0) return isBg ? "bg-up text-up" : "text-up";
+      if (num < 0) return isBg ? "bg-down text-down" : "text-down";
+      return "";
+    }
+
+    async function autoLoadTaifexData() {
+      const container = document.getElementById("taifex-auto-container");
+      container.innerHTML = '<div class="status">擷取期交所資料中...</div>';
+
+      try {
+        const res = await fetch(`${TAIFEX_PROXY}/taifex?t=${Date.now()}`);
+        if (!res.ok) throw new Error("失敗");
+        const htmlText = await res.text();
+        const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+        
+        let currentProduct = "";
+        const data = [];
+        
+        doc.querySelectorAll('table tbody tr').forEach(tr => {
+          const tds = Array.from(tr.querySelectorAll('td, th')).map(td => td.textContent.trim().replace(/,/g, ''));
+          if (tds.length === 0) return;
+
+          const identityIdx = tds.findIndex(t => ['自營商', '投信', '外資'].includes(t));
+          if (identityIdx !== -1) {
+            if (tds[identityIdx] === '自營商' && identityIdx > 0) currentProduct = tds[identityIdx - 1];
+            if (!currentProduct) currentProduct = "其他商品";
+            const nums = tds.slice(identityIdx + 1).map(n => parseInt(n, 10) || 0);
+            if (nums.length >= 12) {
+              data.push({
+                product: currentProduct,
+                identity: tds[identityIdx],
+                tradeNetVol: nums[4],
+                oiLong: nums[6],
+                oiShort: nums[8],
+                oiNetVol: nums[10],
+                oiNetAmt: nums[11]
+              });
+            }
+          }
+        });
+
+        if (data.length === 0) throw new Error("結構異常");
+        renderTaifexTable(data, container);
+
+      } catch (error) {
+        container.innerHTML = `<div class="status" style="color:var(--danger)">期交所連線逾時，請重載。</div>`;
+      }
+    }
+
+    function renderTaifexTable(data, container) {
+      const txForeign = data.find(d => d.product === '臺股期貨' && d.identity === '外資') || { oiNetVol: 0 };
+      const mtxForeign = data.find(d => d.product === '小型臺指期貨' && d.identity === '外資') || { oiNetVol: 0 };
+      const txDealer = data.find(d => d.product === '臺股期貨' && d.identity === '自營商') || { oiNetVol: 0 };
+
+      let html = `
+        <div class="taifex-metrics-grid">
+          <div class="taifex-metric-box">
+            <div class="taifex-metric-title">🔥 外資大台</div>
+            <div class="taifex-metric-value ${getTColorClass(txForeign.oiNetVol)}">${formatTNum(txForeign.oiNetVol)}</div>
+          </div>
+          <div class="taifex-metric-box">
+            <div class="taifex-metric-title">⚡ 外資小台</div>
+            <div class="taifex-metric-value ${getTColorClass(mtxForeign.oiNetVol)}">${formatTNum(mtxForeign.oiNetVol)}</div>
+          </div>
+          <div class="taifex-metric-box">
+            <div class="taifex-metric-title">🏦 自營商期貨</div>
+            <div class="taifex-metric-value ${getTColorClass(txDealer.oiNetVol)}">${formatTNum(txDealer.oiNetVol)}</div>
+          </div>
+        </div>
+        <div class="taifex-table-wrapper touch-scroll-box">
+          <table class="taifex-table">
+            <thead>
+              <tr>
+                <th>商品</th>
+                <th>身份</th>
+                <th>今日淨口</th>
+                <th>多方</th>
+                <th>空方</th>
+                <th style="background:#0f172a">未平倉淨額</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      const products = [...new Set(data.map(d => d.product))];
+      products.forEach(prod => {
+        const rows = data.filter(d => d.product === prod);
+        rows.forEach((row, rIdx) => {
+          html += `<tr>`;
+          if (rIdx === 0) html += `<td rowspan="${rows.length}" class="group-row">${prod}</td>`;
+          
+          let idColor = row.identity === '外資' ? '#1d4ed8' : (row.identity === '投信' ? '#7e22ce' : '#334155');
+          html += `<td class="identity" style="color:${idColor}">${row.identity}</td>`;
+          html += `<td class="${getTColorClass(row.tradeNetVol)}">${formatTNum(row.tradeNetVol)}</td>`;
+          html += `<td>${row.oiLong.toLocaleString()}</td>`;
+          html += `<td>${row.oiShort.toLocaleString()}</td>`;
+          html += `<td class="${getTColorClass(row.oiNetVol, true)}" style="font-weight:bold;">${formatTNum(row.oiNetVol)}</td>`;
+          html += `</tr>`;
+        });
+      });
+
+      html += `</tbody></table></div>`;
+      container.innerHTML = html;
+    }
+
+    function drawCNNGauge(score, rating, updatedAt) {
+      const color = score < 25 ? "#dc2626" : score < 45 ? "#d97706" : score <= 55 ? "#ca8a04" : score < 75 ? "#16a34a" : "#15803d";
+      const angle = (score / 100) * 180 - 90;
+      document.getElementById("cnn-gauge-container").innerHTML = `
+        <div style="width: min(280px, 100%); margin:0 auto; text-align: center;">
+          <svg viewBox="0 0 200 120" style="width: 100%; height: auto;">
+            <path d="M20 100 A80 80 0 0 1 43.43 43.43" fill="none" stroke="#dc2626" stroke-width="20" />
+            <path d="M43.43 43.43 A80 80 0 0 1 87.49 20.99" fill="none" stroke="#d97706" stroke-width="20" />
+            <path d="M87.49 20.99 A80 80 0 0 1 112.51 20.99" fill="none" stroke="#ca8a04" stroke-width="20" />
+            <path d="M112.51 20.99 A80 80 0 0 1 156.56 43.43" fill="none" stroke="#16a34a" stroke-width="20" />
+            <path d="M156.56 43.43 A80 80 0 0 1 180 100" fill="none" stroke="#15803d" stroke-width="20" />
+            <g transform="translate(100,100) rotate(${angle})"><polygon points="-3,0 3,0 0,-65" fill="#0f172a"/><circle cx="0" cy="0" r="6" fill="#0f172a"/></g>
+            <text x="100" y="86" font-size="30" font-weight="900" text-anchor="middle" fill="${color}">${score}</text>
+          </svg>
+          <div style="font-size: 20px; font-weight: 800; color: ${color};">${score < 25 ? "極度恐懼" : score < 45 ? "恐懼" : score <= 55 ? "中性" : score < 75 ? "貪婪" : "極度貪婪"}</div>
+        </div>`;
+    }
+
+    async function fetchCNNIndex() {
+      const controls = document.getElementById("cnn-controls");
+      try {
+        const res = await fetch(`${PROXY_BASE}/cnn`, { cache: "no-store" });
+        if (!res.ok) throw new Error("失敗");
+        const data = await res.json();
+        drawCNNGauge(data.score, data.rating, data.timestamp);
+        controls.innerHTML = `<button class="btn gray btn-sm" onclick="fetchCNNIndex()">整理</button><a class="btn btn-sm" href="https://edition.cnn.com/markets/fear-and-greed" target="_blank">CNN 原頁</a>`;
+      } catch (err) {
+        document.getElementById("cnn-gauge-container").innerHTML = `<div class="status">CNN 指數讀取失敗。</div>`;
+      }
+    }
+
+    function calculateSettlementDate() {
+      const now = new Date();
+      let y = now.getFullYear(), m = now.getMonth();
+      const thirdWednesday = (year, month) => {
+        let count = 0;
+        for (let d = 1; d <= 31; d++) {
+          const date = new Date(year, month, d);
+          if (date.getMonth() !== month) break;
+          if (date.getDay() === 3 && ++count === 3) return date;
+        }
+      };
+      let date = thirdWednesday(y, m);
+      const end = new Date(date); end.setHours(13, 30, 0, 0);
+      if (now > end) date = thirdWednesday(m === 11 ? y + 1 : y, m === 11 ? 0 : m + 1);
+      document.getElementById("settlement-date").textContent = `${date.getFullYear()} / ${date.getMonth() + 1} / ${date.getDate()}`;
+    }
+
+    function renderCalendar() {
+      const y = state.currentCalDate.getFullYear(), m = state.currentCalDate.getMonth();
+      const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), today = new Date();
+      const monthNames = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+      const dayNames = ["日","一","二","三","四","五","六"];
+      let html = `<div class="calendar-header"><button onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button><strong>${y} ${monthNames[m]}</strong><button onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button></div><div class="calendar-grid">`;
+      dayNames.forEach(d => html += `<div class="calendar-day-header">${d}</div>`);
+      for (let i = 0; i < first; i++) html += `<div class="calendar-day empty"></div>`;
+      for (let d = 1; d <= days; d++) {
+        const ymd = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
+        const events = state.userEvents.filter(e => e.date === ymd).map(e => `<div class="event-badge">${e.title}</div>`).join("");
+        html += `<div class="calendar-day ${isToday ? "today" : ""}"><strong>${d}</strong>${events}</div>`;
+      }
+      html += `</div>`;
+      document.getElementById("custom-calendar-container").innerHTML = html;
+    }
+
+    function changeMonth(offset) {
+      state.currentCalDate.setMonth(state.currentCalDate.getMonth() + offset);
+      renderCalendar();
+    }
+
+    function addCustomEvent() {
+      const date = document.getElementById("new-event-date").value;
+      const title = document.getElementById("new-event-title").value.trim();
+      if (!date || !title) return showToast("請輸入日期與事件名稱");
+      state.userEvents.push({ date, title });
+      localStorage.setItem("dashboardEvents", JSON.stringify(state.userEvents));
+      document.getElementById("new-event-title").value = "";
+      renderCalendar();
+      showToast("已新增事件");
+    }
+
+    window.addEventListener("load", () => {
+      state.userEvents = JSON.parse(localStorage.getItem("dashboardEvents") || "[]");
+      calculateSettlementDate();
+      renderCalendar();
+      
+      const savedWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_DISPOSAL_WORKER;
+      document.getElementById("disposal-worker-input").value = savedWorkerUrl;
+
+      fetchCNNIndex();
+      autoLoadTaifexData(); 
+      fetchGooayeEpisodes(); 
+      loadDisposalForecast();
+    });
+  </script>
+</body>
+</html>
