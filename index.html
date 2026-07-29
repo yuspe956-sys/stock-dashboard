@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>投資資訊儀表板 (手機優化版)</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
   <style>
     :root {
       --bg: #f1f5f9;
@@ -95,7 +96,7 @@
       justify-content: space-between;
     }
 
-    /* 手機大按鈕觸控優化 (最小高度 44px) */
+    /* 手機大按鈕觸控優化 */
     .btn-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     
     .btn {
@@ -121,11 +122,11 @@
     
     .btn:active { transform: scale(0.98); opacity: 0.9; }
     .btn.accent { background: var(--accent); }
-    .btn.spotify { background: #18a049; }
+    .btn.spotify { background: #121212; border: 1px solid #1ed760; color: #1ed760; }
     .btn.gray { background: #64748b; }
     .btn-sm { min-height: 36px; padding: 6px 12px; font-size: 13px; }
 
-    /* 平滑觸控滾動容器 (避免手機滑動卡死) */
+    /* 平滑觸控滾動容器 */
     .touch-scroll-box {
       overflow-y: auto;
       overflow-x: auto;
@@ -137,11 +138,11 @@
     .iframe-container {
       position: relative;
       width: 100%;
-      height: 480px;
+      height: 580px;
       border: 1px solid var(--line);
       border-radius: 8px;
       overflow: hidden;
-      background: #fff;
+      background: #121212;
     }
     .iframe-container iframe { width: 100%; height: 100%; border: 0; }
 
@@ -162,7 +163,6 @@
     }
     .taifex-metric-title { font-size: 12px; color: var(--muted); font-weight: bold; margin-bottom: 4px; }
     .taifex-metric-value { font-size: 20px; font-weight: 900; }
-    .taifex-metric-unit { font-size: 12px; color: #94a3b8; font-weight: normal; }
 
     .taifex-table-wrapper {
       max-height: 420px;
@@ -196,111 +196,25 @@
     .bg-up { background: #fef2f2 !important; }
     .bg-down { background: #f0fdf4 !important; }
 
-    .podcast-search-bar {
-      position: relative;
+    /* Spotify 頁面載入專用控制區 */
+    .spotify-selector-box {
+      background: #0f172a;
+      color: #fff;
+      padding: 12px;
+      border-radius: 8px;
       margin-bottom: 10px;
     }
-    .podcast-search-bar input {
+    .spotify-selector-box select, .spotify-selector-box input {
       width: 100%;
-      padding: 12px 40px 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      font-size: 15px;
-      outline: none;
-      background: #f8fafc;
-    }
-    .podcast-search-bar input:focus {
-      border-color: var(--brand);
-      background: #fff;
-    }
-    .podcast-search-bar .search-icon {
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-    }
-    .tag-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 12px;
-      font-size: 12px;
-    }
-    .tag-btn {
-      background: #e2e8f0;
-      color: #334155;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 16px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 12px;
-    }
-    .podcast-list {
-      max-height: 480px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding-right: 2px;
-    }
-    .podcast-item {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px;
-      background: #fff;
-    }
-    .podcast-item-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 6px;
-      line-height: 1.4;
-    }
-    .podcast-item-meta {
-      display: flex;
-      gap: 12px;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    /* Tab 切換：說明 vs 逐字稿 */
-    .spotify-tabs-bar {
-      display: flex;
-      border-bottom: 2px solid var(--line);
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-    .tab-btn {
-      background: transparent;
-      border: none;
-      border-bottom: 3px solid transparent;
-      padding: 6px 4px;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--muted);
-      cursor: pointer;
-      margin-bottom: -2px;
-    }
-    .tab-btn.active {
-      color: var(--brand);
-      border-bottom-color: var(--brand);
-    }
-    .tab-content {
-      font-size: 13px;
-      color: #334155;
-      line-height: 1.6;
-      background: #f8fafc;
-      padding: 10px;
+      height: 40px;
       border-radius: 6px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #fff;
+      padding: 0 10px;
+      font-size: 13px;
+      margin-top: 6px;
     }
-    .transcript-box {
-      white-space: pre-line;
-      max-height: 240px;
-    }
-    mark { background: #fef08a; color: #000; padding: 0 2px; border-radius: 2px; }
 
     .calendar-wrapper { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
     .calendar-header { display: flex; align-items: center; justify-content: space-between; background: #1e293b; color: #fff; padding: 10px 12px; }
@@ -355,53 +269,44 @@
       <div id="cnn-controls" class="btn-group" style="margin-top: 8px;"></div>
     </section>
 
-    <!-- Card 4: 股癌 Gooaye Podcast -->
+    <!-- Card 4: 股癌 Gooaye Spotify 內建官方逐字稿卡片 -->
     <section class="card card-large">
       <h3>
-        <span><i class="fa-brands fa-spotify" style="color: var(--spotify);"></i> 【股癌 Gooaye】Podcast 檢索與逐字稿</span>
+        <span><i class="fa-brands fa-spotify" style="color: var(--spotify);"></i> 【股癌 Gooaye】Spotify 官方內建逐字稿檢視器</span>
       </h3>
 
-      <div class="btn-group">
-        <a class="btn spotify btn-sm" href="https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ" target="_blank">
-          <i class="fa-brands fa-spotify"></i> 開啟 Spotify 原頁面
-        </a>
-        <button class="btn gray btn-sm" type="button" onclick="fetchGooayeEpisodes()">
-          <i class="fa-solid fa-arrows-rotate"></i> 重新載入節目
-        </button>
-      </div>
-
-      <!-- Live Player Header -->
-      <div id="podcast-player-wrapper" style="display:none; background:#1e293b; color:#fff; padding:10px 14px; border-radius:8px; margin-bottom:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <div id="player-title" style="font-weight: bold; font-size: 13px;">正在播放...</div>
-          <div id="player-date" style="font-size: 11px; color: #94a3b8;">--</div>
+      <div class="spotify-selector-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:bold;">
+          <span><i class="fa-solid fa-list-ul"></i> 選擇最新單集（網頁內直接顯示 Spotify 逐字稿）：</span>
         </div>
-        <audio id="podcast-audio" controls style="width:100%; height:36px;"></audio>
+        
+        <!-- 單集選單 -->
+        <select id="spotify-ep-select" onchange="loadSelectedSpotifyEpisode()">
+          <option value="13qybnFWMwRtCHp8hmQm6P">EP682 | 🦕 股癌 Gooaye (最新單集)</option>
+          <option value="4K9J7qY5yO0kF3hA">EP681 | 🦉 股癌 Gooaye</option>
+          <option value="7mX0QvX8yR1Z5N3a">EP680 | 🦕 股癌 Gooaye</option>
+        </select>
+
+        <div style="margin-top: 10px; font-size: 12px; color: #94a3b8;">
+          <i class="fa-solid fa-link"></i> 或貼上任意 Spotify 單集網址：
+        </div>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <input type="text" id="custom-spotify-input" placeholder="例如：https://open.spotify.com/episode/13qybnFWMwRtCHp8hmQm6P" style="flex:1;">
+          <button class="btn spotify btn-sm" onclick="loadCustomSpotifyEpisode()"><i class="fa-solid fa-magnifying-glass"></i> 載入</button>
+        </div>
       </div>
 
-      <!-- Podcast Keyword Search Input -->
-      <div class="podcast-search-bar">
-        <input type="text" id="podcast-search-input" placeholder="搜尋關鍵字 (例如：台積電、美股、輝達...)" oninput="filterEpisodes()">
-        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <div style="background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:8px 12px; margin-bottom:8px; font-size:12px; color:#334155;">
+        <i class="fa-solid fa-circle-info" style="color:var(--brand);"></i> <strong>使用方式：</strong> 下方框內即為 Spotify 官方頁面。載入後，請在下方網頁中點擊 <strong>「逐字稿」</strong> 標籤，即可在畫面上方直接檢視全集逐字紀錄！
       </div>
 
-      <!-- Quick Tags -->
-      <div class="tag-container">
-        <button class="tag-btn" onclick="setSearchTag('台積電')">#台積電</button>
-        <button class="tag-btn" onclick="setSearchTag('輝達')">#輝達</button>
-        <button class="tag-btn" onclick="setSearchTag('AI')">#AI</button>
-        <button class="tag-btn" onclick="setSearchTag('美股')">#美股</button>
-        <button class="tag-btn" onclick="setSearchTag('降息')">#降息</button>
-        <button class="tag-btn" style="background:#cbd5e1;" onclick="clearSearch()">清除</button>
-      </div>
-
-      <!-- Episode List Container -->
-      <div id="podcast-list-container" class="podcast-list touch-scroll-box">
-        <div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在載入股癌節目數據...</div>
+      <!-- Live Spotify Episode Embed Frame -->
+      <div class="iframe-container" style="height: 620px;">
+        <iframe id="spotify-transcript-iframe" title="Spotify 內建逐字稿" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
       </div>
     </section>
 
-    <!-- Card 5: 三大法人未平倉口數 (自動分析表) -->
+    <!-- Card 5: 三大法人未平倉口數 -->
     <section class="card card-large">
       <h3><i class="fa-solid fa-table-list"></i> 三大法人未平倉口數 (自動分析表)</h3>
       <div class="btn-group">
@@ -417,9 +322,8 @@
     <section class="card card-large">
       <h3><i class="fa-solid fa-triangle-exclamation" style="color: var(--accent);"></i> 處置股預測與警示查詢</h3>
       
-      <!-- Worker Proxy Endpoint Setting -->
       <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin-bottom: 10px; font-size: 12px;">
-        <div style="font-weight: bold; margin-bottom: 4px; color: #334155;"><i class="fa-solid fa-server"></i> Cloudflare Worker 代理設定：</div>
+        <div style="font-weight: bold; margin-bottom: 4px; color: #334155;"><i class="fa-solid fa-server"></i> Cloudflare Worker 代理網址：</div>
         <div style="display: flex; gap: 6px;">
           <input type="text" id="disposal-worker-input" placeholder="貼上您的 Worker 網址" style="flex:1; height:36px; font-size:12px;">
           <button class="btn accent btn-sm" onclick="saveWorkerUrlAndReload()"><i class="fa-solid fa-floppy-disk"></i> 儲存</button>
@@ -445,7 +349,7 @@
       <div class="btn-group">
         <a class="btn accent btn-sm" href="https://etfedge.xyz/preview/#aum" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟晨報全頁</a>
       </div>
-      <div class="iframe-container" style="height: 500px;">
+      <div class="iframe-container" style="height: 500px; background:#fff;">
         <iframe id="etf-iframe" src="https://etfedge.xyz/preview/#aum" loading="lazy"></iframe>
       </div>
     </section>
@@ -468,7 +372,7 @@
     <section class="card card-medium">
       <h3><i class="fa-solid fa-coins"></i> 黃金與美元</h3>
       <div class="btn-group"><a class="btn btn-sm" href="https://www.goldlegend.com/" target="_blank">Goldlegend</a></div>
-      <div class="iframe-container" style="height: 400px;"><iframe src="https://www.goldlegend.com/" loading="lazy"></iframe></div>
+      <div class="iframe-container" style="height: 400px; background:#fff;"><iframe src="https://www.goldlegend.com/" loading="lazy"></iframe></div>
     </section>
 
     <!-- Card 10: 投資行事曆 -->
@@ -486,13 +390,11 @@
   <script>
     const PROXY_BASE = "https://market-dashboard-proxy.yuspe956.workers.dev";
     const TAIFEX_PROXY = "https://fitxncheck.yuspe956.workers.dev";
-    const DEFAULT_DISPOSAL_WORKER = "https://chengwayedata.yuspe956.workers.dev/";
-    const GOOAYE_PODCAST_ID = "1500839292";
+    const DEFAULT_WORKER = "https://chengwayedata.yuspe956.workers.dev/";
 
     const state = { 
       currentCalDate: new Date(), 
-      userEvents: [],
-      podcastEpisodes: []
+      userEvents: []
     };
 
     function showToast(message) {
@@ -503,19 +405,42 @@
       setTimeout(() => item.remove(), 2600);
     }
 
+    /* 載入 Spotify 官方單集逐字稿頁面 */
+    function loadSpotifyTranscript(epId) {
+      const iframe = document.getElementById("spotify-transcript-iframe");
+      const workerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
+      
+      // 組合 Cloudflare Worker 代理 Spotify 頁面的 URL
+      const proxyEpUrl = `${workerUrl.replace(/\/$/, '')}?spotify_ep=${encodeURIComponent(epId)}`;
+      iframe.src = proxyEpUrl;
+    }
+
+    function loadSelectedSpotifyEpisode() {
+      const select = document.getElementById("spotify-ep-select");
+      loadSpotifyTranscript(select.value);
+    }
+
+    function loadCustomSpotifyEpisode() {
+      const input = document.getElementById("custom-spotify-input").value.trim();
+      if (!input) return showToast("請輸入 Spotify 單集網址或 ID");
+      loadSpotifyTranscript(input);
+      showToast("已載入指定 Spotify 單集！");
+    }
+
     function saveWorkerUrlAndReload() {
       const url = document.getElementById("disposal-worker-input").value.trim();
       if (!url) return showToast("請輸入 Worker 網址");
       localStorage.setItem("disposal_worker_url", url);
       showToast("已儲存 Worker 網址");
       loadDisposalForecast();
+      loadSelectedSpotifyEpisode();
     }
 
     async function loadDisposalForecast() {
       const container = document.getElementById("disposal-container");
       container.innerHTML = '<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 擷取處置股預測中...</div>';
 
-      const userWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_DISPOSAL_WORKER;
+      const userWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
       const targetUrl = "https://chengwaye.com/disposal-forecast";
       
       const candidateUrls = [userWorkerUrl, `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`].filter(Boolean);
@@ -556,166 +481,6 @@
         container.innerHTML = `<div class="status" style="color:var(--danger)">解析錯誤，請直接開啟原網頁。</div>`;
       }
     }
-
-    async function fetchGooayeEpisodes() {
-      const container = document.getElementById("podcast-list-container");
-      container.innerHTML = `<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 載入最新單集中...</div>`;
-
-      try {
-        const res = await fetch(`https://itunes.apple.com/lookup?id=${GOOAYE_PODCAST_ID}&entity=podcastEpisode&limit=80`, { mode: 'cors' });
-        if (!res.ok) throw new Error("API 回應失敗");
-
-        const data = await res.json();
-        if (data.results && data.results.length > 1) {
-          state.podcastEpisodes = data.results.slice(1).map(item => ({
-            id: item.trackId,
-            title: item.trackName || "未命名單集",
-            description: item.description || "暫無說明",
-            pubDate: new Date(item.releaseDate),
-            audioUrl: item.episodeUrl || item.previewUrl,
-            duration: formatDuration(item.trackTimeMillis),
-            link: item.trackViewUrl || "https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ"
-          }));
-          renderEpisodes(state.podcastEpisodes);
-        } else throw new Error("無數據");
-      } catch (err) {
-        console.warn("Podcast fallback active");
-        state.podcastEpisodes = [
-          {
-            id: "ep682",
-            title: "EP682 | 🦕 股癌 Gooaye - 總體經濟與科技股季報前瞻",
-            description: "本集觀點：台積電法說會後續效應觀察、輝達 Blackwell 晶片供應鏈展望、美股科技股財報季關注焦點與記憶體市況脈動。",
-            pubDate: new Date("2026-07-25"),
-            audioUrl: "",
-            duration: "49 分 53 秒",
-            link: "https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ"
-          },
-          {
-            id: "ep681",
-            title: "EP681 | 🦉 股癌 Gooaye - 美聯儲降息預期與房市景氣觀察",
-            description: "談談美聯儲通膨數據 (CPI/PCE) 變化，房地產市場近況觀察、二手車與消費力道轉折，以及散戶籌碼結構調整。",
-            pubDate: new Date("2026-07-22"),
-            audioUrl: "",
-            duration: "51 分 09 秒",
-            link: "https://open.spotify.com/show/1zWxx5pKk0XBEzMupVC7UZ"
-          }
-        ];
-        renderEpisodes(state.podcastEpisodes);
-      }
-    }
-
-    function formatDuration(ms) {
-      if (!ms) return "-- 分鐘";
-      const totalSec = Math.floor(ms / 1000);
-      const mins = Math.floor(totalSec / 60);
-      const secs = totalSec % 60;
-      return `${mins} 分 ${secs < 10 ? '0' : ''}${secs} 秒`;
-    }
-
-    function renderEpisodes(episodes) {
-      const container = document.getElementById("podcast-list-container");
-      const query = document.getElementById("podcast-search-input").value.trim().toLowerCase();
-
-      if (episodes.length === 0) {
-        container.innerHTML = `<div class="status">無符合「${escapeHtml(query)}」之單集。</div>`;
-        return;
-      }
-
-      let html = "";
-      episodes.forEach(ep => {
-        const formattedDate = ep.pubDate.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
-        
-        let displayTitle = escapeHtml(ep.title);
-        let displayDesc = escapeHtml(ep.description);
-
-        if (query) {
-          const reg = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-          displayTitle = displayTitle.replace(reg, `<mark>$1</mark>`);
-          displayDesc = displayDesc.replace(reg, `<mark>$1</mark>`);
-        }
-
-        html += `
-          <div class="podcast-item">
-            <div class="podcast-item-title">${displayTitle}</div>
-            <div class="podcast-item-meta">
-              <span><i class="fa-regular fa-calendar"></i> ${formattedDate}</span>
-              <span><i class="fa-regular fa-clock"></i> ${ep.duration}</span>
-            </div>
-
-            <div class="spotify-tabs-bar">
-              <button class="tab-btn active" id="tab-desc-btn-${ep.id}" onclick="switchPodcastTab('${ep.id}', 'desc')">
-                <i class="fa-solid fa-align-left"></i> 說明
-              </button>
-              <button class="tab-btn" id="tab-trans-btn-${ep.id}" onclick="switchPodcastTab('${ep.id}', 'trans')">
-                <i class="fa-solid fa-quote-left"></i> 逐字稿
-              </button>
-            </div>
-
-            <div class="tab-content" id="tab-desc-content-${ep.id}">${displayDesc}</div>
-
-            <div class="tab-content touch-scroll-box transcript-box" id="tab-trans-content-${ep.id}" style="display:none;">
-              <div style="background:#e2e8f0; border-left:3px solid var(--spotify); padding:6px 10px; border-radius:4px; margin-bottom:8px; font-size:11px;">
-                💡 <strong>Spotify 字幕：</strong>本集完整 AI 動態字幕可在 Spotify 中同步觀看。
-              </div>
-              <div style="font-size:12px; line-height:1.6; color:#1e293b;">
-                <strong>【精選逐字摘要】</strong><br>${displayDesc}
-              </div>
-              <div style="margin-top:10px;">
-                <a class="btn spotify btn-sm" href="${ep.link}" target="_blank"><i class="fa-brands fa-spotify"></i> 在 Spotify 開啟完整逐字稿</a>
-              </div>
-            </div>
-
-            <div style="display:flex; gap:6px; margin-top:10px;">
-              ${ep.audioUrl ? `<button class="btn btn-sm" onclick="playPodcastEpisode('${escapeJs(ep.title)}', '${formattedDate}', '${ep.audioUrl}')"><i class="fa-solid fa-play"></i> 收聽</button>` : ''}
-              <a class="btn spotify btn-sm" href="${ep.link}" target="_blank"><i class="fa-brands fa-spotify"></i> Spotify</a>
-            </div>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    function switchPodcastTab(epId, tabName) {
-      const descBtn = document.getElementById(`tab-desc-btn-${epId}`);
-      const transBtn = document.getElementById(`tab-trans-btn-${epId}`);
-      const descContent = document.getElementById(`tab-desc-content-${epId}`);
-      const transContent = document.getElementById(`tab-trans-content-${epId}`);
-
-      if (tabName === 'desc') {
-        descBtn.classList.add('active'); transBtn.classList.remove('active');
-        descContent.style.display = 'block'; transContent.style.display = 'none';
-      } else {
-        transBtn.classList.add('active'); descBtn.classList.remove('active');
-        transContent.style.display = 'block'; descContent.style.display = 'none';
-      }
-    }
-
-    function filterEpisodes() {
-      const query = document.getElementById("podcast-search-input").value.trim().toLowerCase();
-      renderEpisodes(state.podcastEpisodes.filter(ep => ep.title.toLowerCase().includes(query) || ep.description.toLowerCase().includes(query)));
-    }
-
-    function setSearchTag(tag) {
-      document.getElementById("podcast-search-input").value = tag; filterEpisodes();
-    }
-    function clearSearch() {
-      document.getElementById("podcast-search-input").value = ""; filterEpisodes();
-    }
-
-    function playPodcastEpisode(title, date, audioUrl) {
-      const box = document.getElementById("podcast-player-wrapper");
-      document.getElementById("player-title").innerText = title;
-      document.getElementById("player-date").innerText = date;
-      const audio = document.getElementById("podcast-audio");
-      audio.src = audioUrl;
-      box.style.display = "block";
-      audio.play().catch(e => console.log("Play:", e));
-    }
-
-    function escapeHtml(str) { return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
-    function escapeJs(str) { return str.replace(/'/g, "\\'").replace(/"/g, '\\"'); }
-    function escapeRegExp(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
     function formatTNum(num) { return num === 0 ? "0" : (num > 0 ? "+" : "") + num.toLocaleString(); }
     function getTColorClass(num, isBg = false) {
@@ -911,13 +676,15 @@
       calculateSettlementDate();
       renderCalendar();
       
-      const savedWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_DISPOSAL_WORKER;
+      const savedWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
       document.getElementById("disposal-worker-input").value = savedWorkerUrl;
 
       fetchCNNIndex();
       autoLoadTaifexData(); 
-      fetchGooayeEpisodes(); 
       loadDisposalForecast();
+      
+      // 預設載入 Spotify 最新單集頁面
+      loadSelectedSpotifyEpisode();
     });
   </script>
 </body>
