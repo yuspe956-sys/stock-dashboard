@@ -924,10 +924,30 @@
         });
 
         if (data.length === 0) throw new Error("結構異常");
+        localStorage.setItem("taifex_last_payload", JSON.stringify({
+          data,
+          fetchedAt: new Date().toISOString()
+        }));
         renderTaifexTable(data, container);
         setText("taifex-updated", `最後更新：${formatLocalTime(new Date())}`);
 
       } catch (error) {
+        const cached = localStorage.getItem("taifex_last_payload");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0) {
+              renderTaifexTable(parsed.data, container);
+              const fallbackBanner = document.createElement("div");
+              fallbackBanner.style.cssText = "margin-bottom:8px; padding:8px 10px; border-radius:8px; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; font-size:12px;";
+              fallbackBanner.textContent = "期交所目前連線較慢，先顯示上次成功抓取的資料。";
+              container.prepend(fallbackBanner);
+              setText("taifex-updated", `最後更新：${formatLocalTime(parsed.fetchedAt || new Date())}`);
+              return;
+            }
+          } catch (e) {}
+        }
+
         container.innerHTML = `<div class="status" style="color:var(--danger)">期交所連線逾時，請重載。</div>`;
         setText("taifex-updated", `最後更新：${formatLocalTime(new Date())}`);
       }
@@ -1112,3 +1132,4 @@
   </script>
 </body>
 </html>
+
