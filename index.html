@@ -357,7 +357,6 @@
         <a class="btn accent btn-sm" href="https://www.taifex.com.tw/cht/3/futContractsDate" target="_blank">期交所原頁</a>
         <button class="btn gray btn-sm" type="button" onclick="autoLoadTaifexData()">重新載入</button>
       </div>
-      <div id="taifex-updated" style="margin:-4px 0 8px; text-align:right; font-size:12px; color:var(--muted);"></div>
       <div id="taifex-auto-container" style="min-height: 180px;">
         <div class="status">正在自動擷取期交所資料並整理中...</div>
       </div>
@@ -435,7 +434,7 @@
 
   <script>
     const PROXY_BASE = "https://market-dashboard-proxy.yuspe956.workers.dev";
-    const TAIFEX_PROXY = "https://market-dashboard-proxy.yuspe956.workers.dev";
+    const TAIFEX_PROXY = "https://fitxncheck.yuspe956.workers.dev";
     const DEFAULT_WORKER = "https://chengwayedata.yuspe956.workers.dev/";
 
     const state = { 
@@ -887,12 +886,12 @@
       const container = document.getElementById("taifex-auto-container");
       if (!container) return;
       container.innerHTML = '<div class="status">擷取期交所資料中...</div>';
-      setText("taifex-updated", "最後更新：讀取中...");
 
       try {
-        const { signal, clear } = withTimeout(12000);
-        const res = await fetch(`${TAIFEX_PROXY}/taifex-margin?t=${Date.now()}`, { cache: "no-store", signal });
-        clear();
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 12000);
+        const res = await fetch(`${TAIFEX_PROXY}/taifex-margin?t=${Date.now()}`, { signal: controller.signal });
+        clearTimeout(timer);
         if (!res.ok) throw new Error("失敗");
         const htmlText = await res.text();
         const doc = new DOMParser().parseFromString(htmlText, 'text/html');
@@ -922,34 +921,11 @@
             }
           }
         });
-
         if (data.length === 0) throw new Error("結構異常");
-        localStorage.setItem("taifex_last_payload", JSON.stringify({
-          data,
-          fetchedAt: new Date().toISOString()
-        }));
         renderTaifexTable(data, container);
-        setText("taifex-updated", `最後更新：${formatLocalTime(new Date())}`);
 
       } catch (error) {
-        const cached = localStorage.getItem("taifex_last_payload");
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0) {
-              renderTaifexTable(parsed.data, container);
-              const fallbackBanner = document.createElement("div");
-              fallbackBanner.style.cssText = "margin-bottom:8px; padding:8px 10px; border-radius:8px; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; font-size:12px;";
-              fallbackBanner.textContent = "期交所目前連線較慢，先顯示上次成功抓取的資料。";
-              container.prepend(fallbackBanner);
-              setText("taifex-updated", `最後更新：${formatLocalTime(parsed.fetchedAt || new Date())}`);
-              return;
-            }
-          } catch (e) {}
-        }
-
         container.innerHTML = `<div class="status" style="color:var(--danger)">期交所連線逾時，請重載。</div>`;
-        setText("taifex-updated", `最後更新：${formatLocalTime(new Date())}`);
       }
     }
 
@@ -959,7 +935,6 @@
       const txDealer = data.find(d => d.product === '臺股期貨' && d.identity === '自營商') || { oiNetVol: 0 };
 
       let html = `
-        <div style="margin-bottom:8px; font-size:12px; color:var(--muted); text-align:right;">最後更新：${formatLocalTime(new Date())}</div>
         <div class="taifex-metrics-grid">
           <div class="taifex-metric-box">
             <div class="taifex-metric-title">🔥 外資大台</div>
@@ -1132,4 +1107,5 @@
   </script>
 </body>
 </html>
+
 
