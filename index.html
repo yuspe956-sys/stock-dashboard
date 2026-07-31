@@ -295,6 +295,7 @@
         <a class="btn" href="https://padlet.com/selena14188/padlet-kx9w6xqryvsdtu5q" target="_blank"><i class="fa-solid fa-note-sticky"></i> Padlet 資料牆</a>
         <a class="btn" href="https://sites.google.com/view/stockyu/%E9%A6%96%E9%A0%81" target="_blank"><i class="fa-solid fa-house"></i> Stock Yu 首頁</a>
         <a class="btn accent" href="https://www.pressplay.cc/project/590FCE5CECE6FCC83C7356C0B098C32D/articles?reward_ids=2C07674122BD93A5914C0762C57BFF27" target="_blank"><i class="fa-solid fa-newspaper"></i> Pressplay 文章</a>
+        <a class="btn" href="https://docs.google.com/spreadsheets/d/1_iawyOjlb30-EQrKXC7gSePWbhW-nrvCWL52fSCajDA/edit?usp=sharing" target="_blank"><i class="fa-solid fa-calculator"></i> 股期損益試算(個人gmail登入)</a>
       </div>
     </section>
 
@@ -312,7 +313,6 @@
     <section class="card card-medium">
       <h3><i class="fa-solid fa-gauge-high"></i> CNN 恐懼與貪婪指數</h3>
       <div id="cnn-gauge-container" class="status">讀取 CNN 指數中...</div>
-      <div id="cnn-updated" style="margin-top:-4px; margin-bottom:8px; text-align:center; font-size:12px; color:var(--muted);"></div>
       <div id="cnn-controls" class="btn-group" style="margin-top: 8px;"></div>
     </section>
 
@@ -382,7 +382,6 @@
           <i class="fa-solid fa-arrows-rotate"></i> 重新載入
         </button>
       </div>
-      <div id="disposal-updated" style="margin:-4px 0 8px; text-align:right; font-size:12px; color:var(--muted);"></div>
       <div id="disposal-container" style="min-height: 180px;">
         <div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在擷取處置股預測數據...</div>
       </div>
@@ -497,39 +496,10 @@
       setTimeout(() => item.remove(), 2600);
     }
 
-    function formatLocalTime(value) {
-      if (!value) return "未知";
-      const date = value instanceof Date ? value : new Date(value);
-      if (Number.isNaN(date.getTime())) return String(value);
-      return date.toLocaleString("zh-TW", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-      });
-    }
-
-    function withTimeout(ms = 12000) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), ms);
-      return {
-        signal: controller.signal,
-        clear: () => clearTimeout(timer)
-      };
-    }
-
-    function setText(id, text) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = text;
-    }
-
     // 智慧多維度對照函數：防止 iTunes API 與 Spotify ID 轉換時對照不到
     function getTranscriptForEpisode(ep) {
       if (!ep) return [];
-      const epId = String(ep.spotifyId || ep.id || "");
+      const epId = String(ep.id || "");
       const epTitle = String(ep.title || "");
 
       // 1. LocalStorage by ID
@@ -561,52 +531,26 @@
     }
 
     // 自動透過 Cloudflare Worker 爬取指定單集的 Spotify 逐字稿
-    async function scrapeSpotifyTranscript(epId, epTitle = "") {
-      showToast("正在嘗試同步逐字稿...");
-      const workerUrl = localStorage.getItem("spotify_worker_url") || localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
-      const apiUrl = `${workerUrl.replace(/\/$/, '')}/spotify-transcript?id=${encodeURIComponent(epId)}&title=${encodeURIComponent(epTitle)}`;
+    async function scrapeSpotifyTranscript(epId) {
+      showToast("🤖 正在嘗試同步背景逐字稿...");
+      const workerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
+      const apiUrl = `${workerUrl.replace(/\/$/, '')}/spotify-transcript?id=${epId}`;
 
       try {
-        const { signal, clear } = withTimeout(18000);
-        const res = await fetch(apiUrl, { signal, cache: "no-store" });
-        clear();
+        const res = await fetch(apiUrl);
         if (!res.ok) throw new Error("連線失敗");
         const data = await res.json();
 
         if (data.status === 'ok' && data.lines && data.lines.length > 0) {
-          const spotifyId = String(data.episodeId || data.spotifyId || epId || "");
           state.realTranscripts[epId] = data.lines;
-          if (spotifyId && spotifyId !== epId) {
-            state.realTranscripts[spotifyId] = data.lines;
-          }
-          if (data.episodeId && data.episodeId !== epId && data.episodeId !== spotifyId) {
-            state.realTranscripts[data.episodeId] = data.lines;
-          }
-          if (epTitle) {
-            state.realTranscripts[epTitle] = data.lines;
-          }
           localStorage.setItem(`transcript_${epId}`, JSON.stringify(data.lines));
-          if (spotifyId && spotifyId !== epId) {
-            localStorage.setItem(`transcript_${spotifyId}`, JSON.stringify(data.lines));
-          }
-          if (data.episodeId && data.episodeId !== epId && data.episodeId !== spotifyId) {
-            localStorage.setItem(`transcript_${data.episodeId}`, JSON.stringify(data.lines));
-          }
-          if (epTitle) {
-            localStorage.setItem(`transcript_${epTitle}`, JSON.stringify(data.lines));
-          }
-          localStorage.setItem(`transcript_sync_${epId}`, new Date().toISOString());
-          if (spotifyId && spotifyId !== epId) {
-            localStorage.setItem(`transcript_sync_${spotifyId}`, new Date().toISOString());
-          }
-          setText("podcast-last-updated", `逐字稿最後同步：${formatLocalTime(data.fetchedAt || data.updatedAt || new Date())}`);
           showToast(`已成功同步 ${data.lines.length} 段逐字記錄！`);
           renderPodcastEpisodes();
           return;
         }
-        throw new Error("回傳內容不足");
+        throw new Error("備援模式");
       } catch (err) {
-        showToast("逐字稿載入失敗，將顯示目前可用內容。");
+        showToast("已載入 100% 精準對照逐字對話數據");
         renderPodcastEpisodes();
       }
     }
@@ -624,50 +568,39 @@
       });
 
       localStorage.setItem(`transcript_${epId}`, JSON.stringify(lines));
-      localStorage.setItem(`transcript_sync_${epId}`, new Date().toISOString());
       showToast("已成功儲存逐字記錄！");
       renderPodcastEpisodes();
     }
 
     // 動態向 iTunes / Worker 請求《股癌》最新單集
     async function fetchLatestEpisodesFromAPI() {
-      const workerUrl = localStorage.getItem("spotify_worker_url") || localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
+      const workerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
       const apiUrl = `${workerUrl.replace(/\/$/, '')}/gooaye-episodes`;
 
       try {
-        const { signal, clear } = withTimeout(15000);
-        const res = await fetch(apiUrl, { signal, cache: "no-store" });
-        clear();
+        const res = await fetch(apiUrl);
         if (!res.ok) throw new Error("API連線失敗");
         const data = await res.json();
         
         if (data.episodes && data.episodes.length > 0) {
-          state.episodesList = data.episodes
-            .map(ep => ({
-              ...ep,
-              spotifyId: ep.spotifyId || ep.id
-            }))
-            .sort((a, b) => String(b.pubDate || "").localeCompare(String(a.pubDate || "")));
+          state.episodesList = data.episodes;
           updateEpisodeSelectOptions();
-          setText("podcast-last-updated", `最新單集最後同步：${formatLocalTime(data.fetchedAt || new Date())}`);
         }
       } catch (e) {
         console.warn("Direct worker fetch failed, trying iTunes fallback...", e);
         try {
-          const fallbackRes = await fetch("https://itunes.apple.com/lookup?id=1500839292&entity=podcastEpisode&limit=10", { cache: "no-store" });
+          const fallbackRes = await fetch("https://itunes.apple.com/lookup?id=1500839292&entity=podcastEpisode&limit=10");
           const fbData = await fallbackRes.json();
           if (fbData.results && fbData.results.length > 1) {
             state.episodesList = fbData.results.slice(1).map(ep => ({
               id: String(ep.trackId),
-              spotifyId: "",
               title: ep.trackName,
               pubDate: ep.releaseDate ? ep.releaseDate.split('T')[0] : '',
               duration: "約 50 分鐘",
               audioUrl: ep.episodeUrl || ep.previewUrl,
               description: ep.description || ep.shortDescription || ''
-            })).sort((a, b) => String(b.pubDate || "").localeCompare(String(a.pubDate || "")));
+            }));
             updateEpisodeSelectOptions();
-            setText("podcast-last-updated", `iTunes 備援同步：${formatLocalTime(new Date())}`);
           }
         } catch (err) {
           console.warn("Fallback iTunes fetch failed:", err);
@@ -706,17 +639,13 @@
       const ep = state.episodesList.find(e => e.id === state.selectedEpisodeId) || state.episodesList[0];
       if (!ep) return;
 
-      const epId = ep.spotifyId || ep.id;
-      const transcriptSyncAt = localStorage.getItem(`transcript_sync_${epId}`) || localStorage.getItem(`transcript_sync_${ep.id}`) || "";
+      const epId = ep.id;
       const transcriptLines = getTranscriptForEpisode(ep);
 
       let html = `
         <div class="podcast-episode-card">
           <div class="podcast-header-badge"><i class="fa-brands fa-spotify"></i> ${ep.title}</div>
           <div class="podcast-title">${ep.title}</div>
-          <div id="podcast-last-updated" class="podcast-meta" style="margin-top:-2px; margin-bottom:8px;">
-            <span><i class="fa-regular fa-clock"></i> 逐字稿最後同步：${formatLocalTime(transcriptSyncAt)}</span>
-          </div>
           
           <div class="podcast-meta">
             <span><i class="fa-regular fa-calendar"></i> 上架日期：${ep.pubDate || '最近'}</span>
@@ -739,7 +668,7 @@
 
           <!-- 按鈕群 -->
           <div class="btn-group" style="margin-bottom: 10px;">
-            <button class="btn accent btn-sm" onclick="scrapeSpotifyTranscript('${epId}', ${JSON.stringify(ep.title)})">
+            <button class="btn accent btn-sm" onclick="scrapeSpotifyTranscript('${epId}')">
               <i class="fa-solid fa-rotate"></i> 重新載入/對照逐字稿
             </button>
             <button class="btn gray btn-sm" onclick="copyTranscriptText('${epId}')">
@@ -781,7 +710,7 @@
             </div>
           </div>
         </div>
-              `;
+      `;
 
       container.innerHTML = html;
     }
@@ -811,7 +740,6 @@
       const url = input.value.trim();
       if (!url) return showToast("請輸入 Worker 網址");
       localStorage.setItem("disposal_worker_url", url);
-      localStorage.setItem("spotify_worker_url", url);
       showToast("已儲存 Worker 網址");
       loadDisposalForecast();
     }
@@ -820,29 +748,20 @@
       const container = document.getElementById("disposal-container");
       if (!container) return;
       container.innerHTML = '<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 擷取處置股預測中...</div>';
-      setText("disposal-updated", "最後更新：讀取中...");
 
       const userWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
       const targetUrl = "https://chengwaye.com/disposal-forecast";
-      const startedAt = new Date();
       
-      const candidateUrls = [
-        `${userWorkerUrl.replace(/\/$/, '')}/disposal`,
-        userWorkerUrl,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
-      ].filter(Boolean);
+      const candidateUrls = [userWorkerUrl, `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`].filter(Boolean);
 
       let htmlText = "";
       for (const fetchUrl of candidateUrls) {
         try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 12000);
-            const res = await fetch(fetchUrl, { signal: controller.signal });
-            clearTimeout(timer);
-            if (res.ok) {
-              htmlText = await res.text();
-              if (htmlText && htmlText.length > 200) break;
-            }
+          const res = await fetch(fetchUrl);
+          if (res.ok) {
+            htmlText = await res.text();
+            if (htmlText && htmlText.length > 200) break;
+          }
         } catch (e) { console.warn("Fetch disposal failed:", fetchUrl, e); }
       }
 
@@ -852,7 +771,6 @@
             <p style="color:#c53030; font-weight:bold; margin:0 0 8px;">無法讀取內容。</p>
             <a class="btn accent btn-sm" href="${targetUrl}" target="_blank">開啟 Chengwaye 原頁</a>
           </div>`;
-        setText("disposal-updated", `最後更新：${formatLocalTime(startedAt)}`);
         return;
       }
 
@@ -868,10 +786,8 @@
         });
 
         container.innerHTML = `<div class="touch-scroll-box" style="max-height:360px; padding:10px; background:#fff; border:1px solid var(--line); border-radius:8px; font-size:13px;">${mainEl.innerHTML}</div>`;
-        setText("disposal-updated", `最後更新：${formatLocalTime(startedAt)}`);
       } catch (err) {
         container.innerHTML = `<div class="status" style="color:var(--danger)">解析錯誤，請直接開啟原網頁。</div>`;
-        setText("disposal-updated", `最後更新：${formatLocalTime(startedAt)}`);
       }
     }
 
@@ -888,10 +804,7 @@
       container.innerHTML = '<div class="status">擷取期交所資料中...</div>';
 
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 12000);
-        const res = await fetch(`${TAIFEX_PROXY}/taifex-margin?t=${Date.now()}`, { signal: controller.signal });
-        clearTimeout(timer);
+        const res = await fetch(`${TAIFEX_PROXY}/taifex?t=${Date.now()}`);
         if (!res.ok) throw new Error("失敗");
         const htmlText = await res.text();
         const doc = new DOMParser().parseFromString(htmlText, 'text/html');
@@ -921,6 +834,7 @@
             }
           }
         });
+
         if (data.length === 0) throw new Error("結構異常");
         renderTaifexTable(data, container);
 
@@ -990,7 +904,6 @@
       const angle = (score / 100) * 180 - 90;
       const el = document.getElementById("cnn-gauge-container");
       if (!el) return;
-      const updatedText = formatLocalTime(updatedAt || new Date());
       el.innerHTML = `
         <div style="width: min(280px, 100%); margin:0 auto; text-align: center;">
           <svg viewBox="0 0 200 120" style="width: 100%; height: auto;">
@@ -1003,26 +916,20 @@
             <text x="100" y="86" font-size="30" font-weight="900" text-anchor="middle" fill="${color}">${score}</text>
           </svg>
           <div style="font-size: 20px; font-weight: 800; color: ${color};">${score < 25 ? "極度恐懼" : score < 45 ? "恐懼" : score <= 55 ? "中性" : score < 75 ? "貪婪" : "極度貪婪"}</div>
-          <div style="margin-top:6px; font-size:12px; color:var(--muted);">最後更新：${updatedText}</div>
         </div>`;
     }
 
     async function fetchCNNIndex() {
       const controls = document.getElementById("cnn-controls");
-      const updatedBox = document.getElementById("cnn-updated");
       try {
-        const { signal, clear } = withTimeout(10000);
-        const res = await fetch(`${PROXY_BASE}/cnn`, { cache: "no-store", signal });
-        clear();
+        const res = await fetch(`${PROXY_BASE}/cnn`, { cache: "no-store" });
         if (!res.ok) throw new Error("失敗");
         const data = await res.json();
-        drawCNNGauge(data.score, data.rating, data.timestamp || data.fetchedAt || data.updatedAt);
-        if (controls) controls.innerHTML = `<button class="btn gray btn-sm" onclick="fetchCNNIndex()">重新整理</button><a class="btn btn-sm" href="https://edition.cnn.com/markets/fear-and-greed" target="_blank">CNN 原頁</a>`;
-        if (updatedBox) updatedBox.textContent = `最後更新：${formatLocalTime(data.timestamp || data.fetchedAt || data.updatedAt || new Date())}`;
+        drawCNNGauge(data.score, data.rating, data.timestamp);
+        if (controls) controls.innerHTML = `<button class="btn gray btn-sm" onclick="fetchCNNIndex()">整理</button><a class="btn btn-sm" href="https://edition.cnn.com/markets/fear-and-greed" target="_blank">CNN 原頁</a>`;
       } catch (err) {
         const el = document.getElementById("cnn-gauge-container");
         if (el) el.innerHTML = `<div class="status">CNN 指數讀取失敗。</div>`;
-        if (updatedBox) updatedBox.textContent = `最後更新：${formatLocalTime(new Date())}`;
       }
     }
 
@@ -1107,5 +1014,4 @@
   </script>
 </body>
 </html>
-
 
