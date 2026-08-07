@@ -383,14 +383,64 @@
       }
     }
 
-    // 渲染期交所表格（含多空淨額與較前一交易日增減）
-    function renderTaifexTable(data, container) {
+    // 從 HTML 擷取期交所資料日期
+    function extractTaifexDateFromHtml(htmlText) {
+      if (!htmlText) return "";
+      const match = htmlText.match(/日期\s*[:：]?\s*(\d{4}[\/\.-]\d{2}[\/\.-]\d{2})/i) || 
+                    htmlText.match(/value=["'](\d{4}\/\d{2}\/\d{2})["']/i) ||
+                    htmlText.match(/(\d{4}\/\d{2}\/\d{2})/);
+      return match ? match[1] : "";
+    }
+
+    // 解析期交所 HTML 表格數據
+    function parseTaifexHtml(htmlText) {
+      const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+      let currentProduct = "";
+      const data = [];
+
+      doc.querySelectorAll('table tbody tr').forEach(tr => {
+        const tds = Array.from(tr.querySelectorAll('td, th')).map(td => td.textContent.trim().replace(/,/g, ''));
+        if (tds.length === 0) return;
+
+        const identityIdx = tds.findIndex(t => ['自營商', '投信', '外資'].includes(t));
+        if (identityIdx !== -1) {
+          if (tds[identityIdx] === '自營商' && identityIdx > 0) {
+            currentProduct = tds[identityIdx - 1];
+          }
+          if (!currentProduct) currentProduct = "臺股期貨";
+
+          const nums = tds.slice(identityIdx + 1).map(n => parseInt(n, 10) || 0);
+          if (nums.length >= 10) {
+            data.push({
+              product: currentProduct,
+              identity: tds[identityIdx],
+              tradeNetVol: nums[4] !== undefined ? nums[4] : (nums[0] - nums[2]),
+              oiLong: nums[6] !== undefined ? nums[6] : nums[2],
+              oiShort: nums[8] !== undefined ? nums[8] : nums[4],
+              oiNetVol: nums[10] !== undefined ? nums[10] : (nums[6] - nums[8])
+            });
+          }
+        }
+      });
+
+      return data;
+    }
+
+    // 渲染期交所表格（含資料日期、多空淨額與較前一交易日增減）
+    function renderTaifexTable(data, container, dataDate, fetchTime) {
       const txForeign = data.find(d => d.product === '臺股期貨' && d.identity === '外資') || { oiNetVol: 0, tradeNetVol: 0 };
       const mtxForeign = data.find(d => d.product === '小型臺指期貨' && d.identity === '外資') || { oiNetVol: 0, tradeNetVol: 0 };
       const txDealer = data.find(d => d.product === '臺股期貨' && d.identity === '自營商') || { oiNetVol: 0, tradeNetVol: 0 };
       const txTrust = data.find(d => d.product === '臺股期貨' && d.identity === '投信') || { oiNetVol: 0, tradeNetVol: 0 };
 
+      const timeFormatted = formatDateTime(fetchTime || new Date().toISOString());
+
       let html = `
+        <div style="font-size: 12px; color: var(--muted); margin-bottom: 10px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border: 1px solid var(--line); gap: 6px;">
+          <span><i class="fa-regular fa-calendar-check" style="color: var(--brand);"></i> 期交所資料日期：<strong style="color: #0f172a; font-size: 13px;">${dataDate || '當日最新交易日'}</strong></span>
+          <span><i class="fa-regular fa-clock"></i> 重新載入時間：<strong>${timeFormatted}</strong></span>
+        </div>
+
         <div class="taifex-metrics-grid">
           <div class="taifex-metric-box">
             <div class="taifex-metric-title">🔥 外資大台淨額</div>
@@ -463,14 +513,29 @@
       ];
 
       let parsedData = null;
+      let dataDate = "";
+      let fetchTime = new Date().toISOString();
+
       for (const url of urls) {
         try {
           const res = await fetch(url, { cache: "no-store" });
           if (res.ok) {
-            const json = await res.json();
-            if (json.data && json.data.length > 0) {
-              parsedData = json.data;
-              break;
+            const contentType = res.headers.get("content-type") || "";
+            if (contentType.includes("json")) {
+              const json = await res.json();
+              if (json.data && json.data.length > 0) {
+                parsedData = json.data;
+                dataDate = json.queryDate || json.dataDate || json.date || "";
+                if (json.timestamp) fetchTime = json.timestamp;
+                break;
+              }
+            } else {
+              const text = await res.text();
+              if (text && text.length > 200) {
+                parsedData = parseTaifexHtml(text);
+                dataDate = extractTaifexDateFromHtml(text);
+                if (parsedData.length > 0) break;
+              }
             }
           }
         } catch (e) {
@@ -479,7 +544,7 @@
       }
 
       if (parsedData && parsedData.length > 0) {
-        renderTaifexTable(parsedData, container);
+        renderTaifexTable(parsedData, container, dataDate, fetchTime);
       } else {
         container.innerHTML = `
           <div style="background:#fff5f5; border:1px solid #feb2b2; border-radius:8px; padding:16px; text-align:center; font-size:13px;">
@@ -725,3 +790,4 @@
   </script>
 </body>
 </html>
+
