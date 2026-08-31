@@ -194,16 +194,27 @@
     .bg-up { background: #fef2f2 !important; }
     .bg-down { background: #f0fdf4 !important; }
 
-    .calendar-wrapper { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    /* --- 行事曆專用樣式 --- */
+    .calendar-wrapper { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
     .calendar-header { display: flex; align-items: center; justify-content: space-between; background: #1e293b; color: #fff; padding: 10px 12px; }
-    .calendar-header button { color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 4px 10px; }
+    .calendar-header button { color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; }
-    .calendar-day-header, .calendar-day { background: #fff; padding: 4px; min-height: 60px; font-size: 12px; }
+    .calendar-day-header, .calendar-day { background: #fff; padding: 4px; min-height: 65px; font-size: 12px; }
     .calendar-day-header { min-height: auto; text-align: center; font-weight: 700; color: var(--muted); padding: 6px 0; }
     .calendar-day.empty { background: #f8fafc; }
     .calendar-day.today { outline: 2px solid var(--brand); outline-offset: -2px; }
     .event-badge { margin-top: 3px; border-radius: 4px; padding: 2px 4px; color: #fff; background: var(--accent); font-size: 10px; word-break: break-all; }
     
+    .event-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .event-list-item:nth-child(even) { background: #f8fafc; }
+
     .form-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
     @media (min-width: 480px) { .form-row { flex-direction: row; } }
     input, select { min-height: 42px; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 14px; background: #fff; }
@@ -331,15 +342,56 @@
       <div class="iframe-container" style="height: 420px; background:#fff;"><iframe src="https://www.goldlegend.com/" loading="lazy"></iframe></div>
     </section>
 
-    <!-- Card 10: 投資行事曆 -->
+    <!-- Card 10: 投資行事曆 (Google 試算表連動與密碼保護版) -->
     <section class="card card-large">
-      <h3><i class="fa-solid fa-calendar-days"></i> 投資行事曆</h3>
+      <h3>
+        <span><i class="fa-solid fa-calendar-days"></i> 投資行事曆 (Google 雲端試算表連動)</span>
+        <span id="calendar-sync-badge" style="font-size: 11px; font-weight: normal; background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 99px;">
+          <i class="fa-solid fa-circle-notch fa-spin"></i> 檢查連線
+        </span>
+      </h3>
+
+      <!-- Google Apps Script 網址與專屬管理密碼設定區塊 -->
+      <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 12px;">
+        <div style="font-weight: bold; margin-bottom: 6px; color: #334155; display:flex; justify-content:space-between; align-items:center;">
+          <span><i class="fa-brands fa-google-drive" style="color: #10b981;"></i> Google Apps Script (GS) 雲端連線設定：</span>
+          <span style="font-size: 11px; color: #0284c7;"><i class="fa-solid fa-shield-halved"></i> 密碼保護 & 自動清理2年前舊資料</span>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="calendar-gas-input" placeholder="貼上您的 Google Apps Script 網址" style="flex:1; height:36px; font-size:12px;">
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input type="password" id="calendar-key-input" placeholder="輸入您的管理員專屬密碼 (修改/刪除時驗證)" style="flex:1; height:36px; font-size:12px;">
+            <button class="btn accent btn-sm" onclick="saveCalendarGasConfig()"><i class="fa-solid fa-floppy-disk"></i> 儲存設定</button>
+            <button class="btn gray btn-sm" onclick="fetchCalendarEventsFromCloud()"><i class="fa-solid fa-arrows-rotate"></i> 重新同步</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 新增事件表單 -->
       <div class="form-row">
         <input type="date" id="new-event-date" />
-        <input type="text" id="new-event-title" placeholder="新增事件，如 CPI 公布" style="flex: 1;" />
-        <button class="btn accent" type="button" onclick="addCustomEvent()">新增</button>
+        <input type="text" id="new-event-title" placeholder="新增投資事件 (如: 輝達財報、聯準會降息、CPI 公布)" style="flex: 1;" />
+        <button class="btn accent" type="button" id="add-event-btn" onclick="addCustomEvent()">
+          <i class="fa-solid fa-plus"></i> 新增至雲端
+        </button>
       </div>
+
+      <!-- 日曆月視圖 -->
       <div id="custom-calendar-container" class="calendar-wrapper"></div>
+
+      <!-- 近期與未來事件管理清單 -->
+      <div style="margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff;">
+        <div style="background: #f1f5f9; padding: 8px 12px; font-size: 13px; font-weight: bold; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
+          <span><i class="fa-solid fa-list-check"></i> 近期與未來事件清單</span>
+          <span id="event-count-badge" style="font-size: 11px; color: var(--muted);">0 個事件</span>
+        </div>
+        <div id="events-list-container" class="touch-scroll-box" style="max-height: 180px;">
+          <div style="text-align: center; color: var(--muted); padding: 16px; font-size: 12px;">暫無事件資料</div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -347,10 +399,13 @@
     const PROXY_BASE = "https://market-dashboard-proxy.yuspe956.workers.dev";
     const TAIFEX_PROXY = "https://fitxncheck.yuspe956.workers.dev";
     const DEFAULT_WORKER = "https://chengwayedata.yuspe956.workers.dev/";
+    const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyc8SdEj6pRvqHrqyY1ncbwd9ENbFMZMPTLxkuNZjUJ3Y-IqW9f2GP1ZGssMzykXUh3/exec";
 
     const state = { 
       currentCalDate: new Date(), 
-      userEvents: []
+      userEvents: [],
+      gasSyncUrl: "",
+      gasSyncKey: ""
     };
 
     function showToast(message) {
@@ -426,7 +481,7 @@
       return data;
     }
 
-    // 渲染期交所表格（含資料日期、多空淨額與較前一交易日增減）
+    // 渲染期交所表格
     function renderTaifexTable(data, container, dataDate, fetchTime) {
       const txForeign = data.find(d => d.product === '臺股期貨' && d.identity === '外資') || { oiNetVol: 0, tradeNetVol: 0 };
       const mtxForeign = data.find(d => d.product === '小型臺指期貨' && d.identity === '外資') || { oiNetVol: 0, tradeNetVol: 0 };
@@ -561,7 +616,7 @@
       if (frame) frame.src = `${PROXY_BASE}/whatmk/?t=${Date.now()}`;
     }
 
-    // 繪製 CNN 恐懼指數 Gauge (含最新更新時間)
+    // 繪製 CNN 恐懼指數 Gauge
     function drawCNNGauge(score, rating, updatedAt) {
       const color = score < 25 ? "#dc2626" : score < 45 ? "#d97706" : score <= 55 ? "#ca8a04" : score < 75 ? "#16a34a" : "#15803d";
       const angle = (score / 100) * 180 - 90;
@@ -720,6 +775,88 @@
       }
     }
 
+    // ==========================================
+    // 投資行事曆 (Google 試算表 GS 雲端連動與密碼保護)
+    // ==========================================
+
+    function saveCalendarGasConfig() {
+      const urlInput = document.getElementById("calendar-gas-input");
+      const keyInput = document.getElementById("calendar-key-input");
+      
+      const url = urlInput ? urlInput.value.trim() : "";
+      const key = keyInput ? keyInput.value.trim() : "";
+
+      state.gasSyncUrl = url || DEFAULT_GAS_URL;
+      state.gasSyncKey = key;
+
+      localStorage.setItem("calendar_gas_url", state.gasSyncUrl);
+      localStorage.setItem("calendar_gas_key", key);
+
+      showToast("已儲存 Google 試算表網址與管理員密碼！");
+      fetchCalendarEventsFromCloud();
+    }
+
+    function updateSyncBadge(status) {
+      const badge = document.getElementById("calendar-sync-badge");
+      if (!badge) return;
+      if (status === 'connected') {
+        badge.innerHTML = `<i class="fa-solid fa-circle" style="color:#16a34a;"></i> 雲端同步中`;
+        badge.style.background = '#dcfce7';
+        badge.style.color = '#15803d';
+      } else if (status === 'loading') {
+        badge.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 同步中...`;
+        badge.style.background = '#f1f5f9';
+        badge.style.color = '#475569';
+      } else {
+        badge.innerHTML = `<i class="fa-solid fa-circle" style="color:#ca8a04;"></i> 本地離線模式`;
+        badge.style.background = '#fef9c3';
+        badge.style.color = '#854d0e';
+      }
+    }
+
+    // 本地自動清理兩年以前的舊資料 (備用)
+    function cleanOldEventsLocally() {
+      const twoYearsAgo = new Date();
+      twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+      twoYearsAgo.setHours(0, 0, 0, 0);
+
+      state.userEvents = state.userEvents.filter(e => {
+        if (!e.date) return false;
+        const d = new Date(e.date.replace(/-/g, '/'));
+        return !isNaN(d.getTime()) && d >= twoYearsAgo;
+      });
+      localStorage.setItem("dashboardEvents", JSON.stringify(state.userEvents));
+    }
+
+    // 從 Google 試算表雲端讀取事件清單
+    async function fetchCalendarEventsFromCloud() {
+      const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
+
+      updateSyncBadge('loading');
+      try {
+        const res = await fetch(`${gasUrl}?action=get&t=${Date.now()}`);
+        if (!res.ok) throw new Error("GAS 連線異常");
+        const json = await res.json();
+        
+        if (json.status === 'ok' && Array.isArray(json.events)) {
+          state.userEvents = json.events;
+          cleanOldEventsLocally();
+          renderCalendar();
+          renderEventsList();
+          updateSyncBadge('connected');
+        } else {
+          throw new Error(json.message || "取得資料失敗");
+        }
+      } catch (err) {
+        console.warn("GAS Fetch failed, fallback to local:", err);
+        updateSyncBadge('offline');
+        cleanOldEventsLocally();
+        renderCalendar();
+        renderEventsList();
+      }
+    }
+
+    // 渲染日曆月視圖
     function renderCalendar() {
       const el = document.getElementById("custom-calendar-container");
       if (!el) return;
@@ -728,17 +865,56 @@
       const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), today = new Date();
       const monthNames = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
       const dayNames = ["日","一","二","三","四","五","六"];
-      let html = `<div class="calendar-header"><button onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button><strong>${y} ${monthNames[m]}</strong><button onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button></div><div class="calendar-grid">`;
+      
+      let html = `<div class="calendar-header">
+        <button onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+        <strong>${y} 年 ${monthNames[m]}</strong>
+        <button onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+      </div><div class="calendar-grid">`;
+      
       dayNames.forEach(d => html += `<div class="calendar-day-header">${d}</div>`);
       for (let i = 0; i < first; i++) html += `<div class="calendar-day empty"></div>`;
+      
       for (let d = 1; d <= days; d++) {
         const ymd = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
-        const events = state.userEvents.filter(e => e.date === ymd).map(e => `<div class="event-badge">${e.title}</div>`).join("");
-        html += `<div class="calendar-day ${isToday ? "today" : ""}"><strong>${d}</strong>${events}</div>`;
+        const dayEvents = state.userEvents.filter(e => e.date === ymd);
+        const eventsHtml = dayEvents.map(e => `<div class="event-badge" title="${e.title}">${e.title}</div>`).join("");
+        html += `<div class="calendar-day ${isToday ? "today" : ""}"><strong>${d}</strong>${eventsHtml}</div>`;
       }
       html += `</div>`;
       el.innerHTML = html;
+    }
+
+    // 渲染近期事件清單
+    function renderEventsList() {
+      const container = document.getElementById("events-list-container");
+      const badge = document.getElementById("event-count-badge");
+      if (!container) return;
+
+      const sortedEvents = [...state.userEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+      if (badge) badge.textContent = `${sortedEvents.length} 個事件 (近兩年與未來)`;
+
+      if (sortedEvents.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 16px; font-size: 12px;">目前尚無行事曆事件</div>`;
+        return;
+      }
+
+      let html = "";
+      sortedEvents.forEach(evt => {
+        html += `
+          <div class="event-list-item">
+            <div>
+              <strong style="color: var(--brand); margin-right: 8px;">${evt.date}</strong>
+              <span>${evt.title}</span>
+            </div>
+            <button class="btn gray btn-sm" style="min-height:28px; padding:2px 8px; font-size:11px;" onclick="deleteCalendarEvent('${evt.id}')">
+              <i class="fa-solid fa-trash-can" style="color: #ef4444;"></i> 刪除
+            </button>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
     }
 
     function changeMonth(offset) {
@@ -746,26 +922,106 @@
       renderCalendar();
     }
 
-    function addCustomEvent() {
+    // 新增事件至雲端 (帶入密碼驗證)
+    async function addCustomEvent() {
       const dateEl = document.getElementById("new-event-date");
       const titleEl = document.getElementById("new-event-title");
+      const btn = document.getElementById("add-event-btn");
       if (!dateEl || !titleEl) return;
 
       const date = dateEl.value;
       const title = titleEl.value.trim();
-      if (!date || !title) return showToast("請輸入日期與事件名稱");
+      if (!date || !title) return showToast("請輸入完整日期與事件名稱");
 
-      state.userEvents.push({ date, title });
-      localStorage.setItem("dashboardEvents", JSON.stringify(state.userEvents));
+      const newId = 'evt_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);
+      const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
+      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || "";
+
+      if (gasUrl) {
+        if (!gasKey) {
+          return showToast("⚠️ 請先在上方輸入管理員專屬密碼並儲存！");
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 驗證並儲存中...`;
+        try {
+          const res = await fetch(`${gasUrl}?action=add&key=${encodeURIComponent(gasKey)}&date=${encodeURIComponent(date)}&title=${encodeURIComponent(title)}&t=${Date.now()}`);
+          const json = await res.json();
+          if (json.status === 'ok') {
+            state.userEvents = json.events;
+            cleanOldEventsLocally();
+            showToast("已成功寫入 Google 試算表！");
+          } else {
+            throw new Error(json.message || "寫入失敗");
+          }
+        } catch (err) {
+          showToast(err.message || "密碼錯誤或無法寫入雲端");
+          return;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-plus"></i> 新增至雲端`;
+        }
+      } else {
+        state.userEvents.push({ id: newId, date, title });
+        cleanOldEventsLocally();
+        showToast("已新增至本地行事曆");
+      }
+
       titleEl.value = "";
       renderCalendar();
-      showToast("已新增事件");
+      renderEventsList();
+    }
+
+    // 刪除事件 (帶入密碼驗證)
+    async function deleteCalendarEvent(id) {
+      const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
+      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || "";
+
+      if (gasUrl) {
+        if (!gasKey) {
+          return showToast("⚠️ 刪除需要管理員密碼，請先在上方設定密碼！");
+        }
+
+        showToast("正在驗證密碼並從 Google 試算表刪除...");
+        try {
+          const res = await fetch(`${gasUrl}?action=delete&key=${encodeURIComponent(gasKey)}&id=${encodeURIComponent(id)}&t=${Date.now()}`);
+          const json = await res.json();
+          if (json.status === 'ok') {
+            state.userEvents = json.events;
+            cleanOldEventsLocally();
+            showToast("已從雲端試算表刪除！");
+          } else {
+            throw new Error(json.message || "刪除失敗");
+          }
+        } catch (err) {
+          showToast(err.message || "密碼錯誤，刪除失敗");
+          return;
+        }
+      } else {
+        state.userEvents = state.userEvents.filter(e => e.id !== id);
+        cleanOldEventsLocally();
+        showToast("已自本地刪除");
+      }
+
+      renderCalendar();
+      renderEventsList();
     }
 
     window.addEventListener("load", () => {
       state.userEvents = JSON.parse(localStorage.getItem("dashboardEvents") || "[]");
+      state.gasSyncUrl = localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
+      state.gasSyncKey = localStorage.getItem("calendar_gas_key") || "";
+
+      const gasInput = document.getElementById("calendar-gas-input");
+      if (gasInput) gasInput.value = state.gasSyncUrl;
+
+      const keyInput = document.getElementById("calendar-key-input");
+      if (keyInput) keyInput.value = state.gasSyncKey;
+
       calculateSettlementDate();
+      cleanOldEventsLocally();
       renderCalendar();
+      renderEventsList();
       
       const savedWorkerUrl = localStorage.getItem("disposal_worker_url") || DEFAULT_WORKER;
       const disposalInput = document.getElementById("disposal-worker-input");
@@ -786,6 +1042,9 @@
       reloadWhatmk();
       autoLoadTaifexData(); 
       loadDisposalForecast();
+      
+      // 從 Google 試算表同步行事曆
+      fetchCalendarEventsFromCloud();
     });
   </script>
 </body>
