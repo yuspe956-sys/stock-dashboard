@@ -362,9 +362,10 @@
           <div style="display: flex; gap: 6px;">
             <input type="text" id="calendar-gas-input" placeholder="貼上您的 Google Apps Script 網址" style="flex:1; height:36px; font-size:12px;">
           </div>
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <input type="password" id="calendar-key-input" placeholder="輸入您的管理員專屬密碼 (修改/刪除時驗證)" style="flex:1; height:36px; font-size:12px;">
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <input type="password" id="calendar-key-input" placeholder="輸入管理員密碼 (預設 0714)" style="flex:1; min-width: 140px; height:36px; font-size:12px;">
             <button class="btn accent btn-sm" onclick="saveCalendarGasConfig()"><i class="fa-solid fa-floppy-disk"></i> 儲存設定</button>
+            <button class="btn gray btn-sm" onclick="testGasConnection()"><i class="fa-solid fa-key"></i> 測試密碼與連線</button>
             <button class="btn gray btn-sm" onclick="fetchCalendarEventsFromCloud()"><i class="fa-solid fa-arrows-rotate"></i> 重新同步</button>
           </div>
         </div>
@@ -414,7 +415,7 @@
       item.className = "toast";
       item.textContent = message;
       document.getElementById("toast-container").appendChild(item);
-      setTimeout(() => item.remove(), 2600);
+      setTimeout(() => item.remove(), 3200);
     }
 
     function formatTNum(num) { 
@@ -780,6 +781,12 @@
     // 投資行事曆 (Google 試算表 GS 雲端連動與密碼保護)
     // ==========================================
 
+    function getActiveGasKey() {
+      const keyInput = document.getElementById("calendar-key-input");
+      const typed = keyInput ? keyInput.value.trim() : "";
+      return typed || state.gasSyncKey || localStorage.getItem("calendar_gas_key") || DEFAULT_ADMIN_KEY;
+    }
+
     function saveCalendarGasConfig() {
       const urlInput = document.getElementById("calendar-gas-input");
       const keyInput = document.getElementById("calendar-key-input");
@@ -793,8 +800,23 @@
       localStorage.setItem("calendar_gas_url", state.gasSyncUrl);
       localStorage.setItem("calendar_gas_key", state.gasSyncKey);
 
-      showToast("已儲存 Google 試算表設定與密碼！");
+      showToast("已儲存 Google 試算表網址與密碼！");
       fetchCalendarEventsFromCloud();
+    }
+
+    // 專屬測試按鈕：即時測試密碼與連線
+    async function testGasConnection() {
+      const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
+      const gasKey = getActiveGasKey();
+
+      showToast("正在測試密碼與連線...");
+      try {
+        const res = await fetch(`${gasUrl}?action=test_auth&key=${encodeURIComponent(gasKey)}&t=${Date.now()}`);
+        const json = await res.json();
+        showToast(json.message || "連線測試完成");
+      } catch (err) {
+        showToast("❌ 連線異常，請確認 Apps Script 部署權限為「所有人」");
+      }
     }
 
     function updateSyncBadge(status) {
@@ -936,23 +958,25 @@
 
       const newId = 'evt_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);
       const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
-      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || DEFAULT_ADMIN_KEY;
+      const gasKey = getActiveGasKey();
 
       if (gasUrl) {
         btn.disabled = true;
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 驗證並儲存中...`;
         try {
-          const res = await fetch(`${gasUrl}?action=add&key=${encodeURIComponent(gasKey)}&date=${encodeURIComponent(date)}&title=${encodeURIComponent(title)}&t=${Date.now()}`);
+          const fetchUrl = `${gasUrl}?action=add&key=${encodeURIComponent(gasKey)}&date=${encodeURIComponent(date)}&title=${encodeURIComponent(title)}&t=${Date.now()}`;
+          const res = await fetch(fetchUrl);
           const json = await res.json();
           if (json.status === 'ok') {
-            state.userEvents = json.events;
+            state.userEvents = json.events || [];
             cleanOldEventsLocally();
-            showToast("已成功寫入 Google 試算表！");
+            showToast("🎉 已成功寫入 Google 試算表！");
           } else {
             throw new Error(json.message || "寫入失敗");
           }
         } catch (err) {
-          showToast(err.message || "密碼錯誤或無法寫入雲端");
+          console.error("GAS Add Error:", err);
+          showToast(err.message || "無法寫入雲端");
           return;
         } finally {
           btn.disabled = false;
@@ -972,15 +996,16 @@
     // 刪除事件 (帶入密碼驗證)
     async function deleteCalendarEvent(id) {
       const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
-      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || DEFAULT_ADMIN_KEY;
+      const gasKey = getActiveGasKey();
 
       if (gasUrl) {
         showToast("正在驗證密碼並從 Google 試算表刪除...");
         try {
-          const res = await fetch(`${gasUrl}?action=delete&key=${encodeURIComponent(gasKey)}&id=${encodeURIComponent(id)}&t=${Date.now()}`);
+          const fetchUrl = `${gasUrl}?action=delete&key=${encodeURIComponent(gasKey)}&id=${encodeURIComponent(id)}&t=${Date.now()}`;
+          const res = await fetch(fetchUrl);
           const json = await res.json();
           if (json.status === 'ok') {
-            state.userEvents = json.events;
+            state.userEvents = json.events || [];
             cleanOldEventsLocally();
             showToast("已從雲端試算表刪除！");
           } else {
