@@ -400,6 +400,7 @@
     const TAIFEX_PROXY = "https://fitxncheck.yuspe956.workers.dev";
     const DEFAULT_WORKER = "https://chengwayedata.yuspe956.workers.dev/";
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyc8SdEj6pRvqHrqyY1ncbwd9ENbFMZMPTLxkuNZjUJ3Y-IqW9f2GP1ZGssMzykXUh3/exec";
+    const DEFAULT_ADMIN_KEY = "0714";
 
     const state = { 
       currentCalDate: new Date(), 
@@ -787,12 +788,12 @@
       const key = keyInput ? keyInput.value.trim() : "";
 
       state.gasSyncUrl = url || DEFAULT_GAS_URL;
-      state.gasSyncKey = key;
+      state.gasSyncKey = key || DEFAULT_ADMIN_KEY;
 
       localStorage.setItem("calendar_gas_url", state.gasSyncUrl);
-      localStorage.setItem("calendar_gas_key", key);
+      localStorage.setItem("calendar_gas_key", state.gasSyncKey);
 
-      showToast("已儲存 Google 試算表網址與管理員密碼！");
+      showToast("已儲存 Google 試算表設定與密碼！");
       fetchCalendarEventsFromCloud();
     }
 
@@ -935,13 +936,9 @@
 
       const newId = 'evt_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);
       const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
-      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || "";
+      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || DEFAULT_ADMIN_KEY;
 
       if (gasUrl) {
-        if (!gasKey) {
-          return showToast("⚠️ 請先在上方輸入管理員專屬密碼並儲存！");
-        }
-
         btn.disabled = true;
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 驗證並儲存中...`;
         try {
@@ -975,13 +972,9 @@
     // 刪除事件 (帶入密碼驗證)
     async function deleteCalendarEvent(id) {
       const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
-      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || "";
+      const gasKey = state.gasSyncKey || localStorage.getItem("calendar_gas_key") || DEFAULT_ADMIN_KEY;
 
       if (gasUrl) {
-        if (!gasKey) {
-          return showToast("⚠️ 刪除需要管理員密碼，請先在上方設定密碼！");
-        }
-
         showToast("正在驗證密碼並從 Google 試算表刪除...");
         try {
           const res = await fetch(`${gasUrl}?action=delete&key=${encodeURIComponent(gasKey)}&id=${encodeURIComponent(id)}&t=${Date.now()}`);
@@ -1010,7 +1003,7 @@
     window.addEventListener("load", () => {
       state.userEvents = JSON.parse(localStorage.getItem("dashboardEvents") || "[]");
       state.gasSyncUrl = localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
-      state.gasSyncKey = localStorage.getItem("calendar_gas_key") || "";
+      state.gasSyncKey = localStorage.getItem("calendar_gas_key") || DEFAULT_ADMIN_KEY;
 
       const gasInput = document.getElementById("calendar-gas-input");
       if (gasInput) gasInput.value = state.gasSyncUrl;
@@ -1049,4 +1042,3 @@
   </script>
 </body>
 </html>
-
