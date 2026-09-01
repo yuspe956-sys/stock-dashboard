@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>投資資訊儀表板 (手機優化版)</title>
+  
+  <!-- 網頁 Favicon 與手機主畫面圖示 -->
+  <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1jtlyognTxW8Sgsz6wgKLbLftXD2ZR6yZ" />
+  <link rel="shortcut icon" href="https://lh3.googleusercontent.com/d/1jtlyognTxW8Sgsz6wgKLbLftXD2ZR6yZ" />
+  <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1jtlyognTxW8Sgsz6wgKLbLftXD2ZR6yZ" />
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
   <style>
@@ -54,6 +60,13 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+    }
+
+    .header-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      border-radius: 6px;
     }
 
     .dashboard-grid {
@@ -227,7 +240,10 @@
   <div id="toast-container"></div>
   
   <header class="app-header">
-    <h1><i class="fa-solid fa-chart-line"></i> 投資資訊儀表板</h1>
+    <h1>
+      <img src="https://lh3.googleusercontent.com/d/1jtlyognTxW8Sgsz6wgKLbLftXD2ZR6yZ" alt="Logo" class="header-logo" onerror="this.style.display='none'" />
+      投資資訊儀表板
+    </h1>
   </header>
 
   <main class="dashboard-grid">
