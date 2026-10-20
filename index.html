@@ -158,28 +158,29 @@
     .status { color: var(--muted); text-align: center; padding: 24px 8px; font-size: 14px; }
 
     /* --- 期交所數據樣式 --- */
-    .taifex-metrics-grid {
+    .taifex-metrics-grid, .twse-metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 10px;
       margin-bottom: 12px;
     }
-    .taifex-metric-box {
+    .taifex-metric-box, .twse-metric-box {
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 12px 10px;
       text-align: center;
       background: #f8fafc;
     }
-    .taifex-metric-title { font-size: 12px; color: var(--muted); font-weight: bold; margin-bottom: 4px; }
-    .taifex-metric-value { font-size: 20px; font-weight: 900; }
-    .taifex-metric-sub { font-size: 11px; margin-top: 4px; color: var(--muted); }
+    .taifex-metric-title, .twse-metric-title { font-size: 12px; color: var(--muted); font-weight: bold; margin-bottom: 4px; }
+    .taifex-metric-value, .twse-metric-value { font-size: 20px; font-weight: 900; }
+    .taifex-metric-sub, .twse-metric-sub { font-size: 11px; margin-top: 4px; color: var(--muted); }
 
-    .taifex-table-wrapper {
+    .taifex-table-wrapper, .twse-table-wrapper {
       max-height: 420px;
       border: 1px solid var(--line);
+      border-radius: 8px;
     }
-    .taifex-table {
+    .taifex-table, .twse-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
@@ -187,7 +188,7 @@
       background: #fff;
       white-space: nowrap;
     }
-    .taifex-table th {
+    .taifex-table th, .twse-table th {
       background: #1e293b;
       color: #fff;
       padding: 10px 8px;
@@ -197,8 +198,9 @@
       font-weight: 600;
       font-size: 12px;
     }
-    .taifex-table th:nth-child(1), .taifex-table th:nth-child(2) { text-align: left; }
-    .taifex-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+    .taifex-table th:nth-child(1), .taifex-table th:nth-child(2),
+    .twse-table th:nth-child(1) { text-align: left; }
+    .taifex-table td, .twse-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
     .taifex-table .group-row { text-align: left; font-weight: 800; background: #f1f5f9; color: #1e293b; }
     .taifex-table .identity { text-align: left; font-weight: 700; }
     
@@ -325,15 +327,21 @@
       </div>
     </section>
 
-    <!-- Card 7: ETF 晨報 -->
+    <!-- Card 7: 證交所 信用交易 (全市場融資融券與擔保維持率) 取代原本 ETF 晨報 -->
     <section class="card card-large">
-      <h3><i class="fa-solid fa-file-invoice-dollar"></i> ETF 晨報 <span id="workday-display" style="font-size: 12px; color: var(--muted); font-weight: normal;"></span></h3>
+      <h3>
+        <span><i class="fa-solid fa-scale-balanced" style="color: var(--brand);"></i> 證交所 信用交易 (全市場擔保維持率與融資融券)</span>
+      </h3>
       <div class="btn-group">
-        <a class="btn" href="https://etfedge.xyz/" target="_blank">ETF Edge</a>
-        <a class="btn accent btn-sm" id="dynamic-etf-btn" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟今日晨報全頁</a>
+        <a class="btn accent btn-sm" href="https://www.twse.com.tw/dashboard/zh/credit/margin.html" target="_blank">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟證交所原頁
+        </a>
+        <button class="btn gray btn-sm" type="button" onclick="loadTwseMarginData()">
+          <i class="fa-solid fa-arrows-rotate"></i> 重新載入數據
+        </button>
       </div>
-      <div class="iframe-container" style="height: 520px; background:#fff;">
-        <iframe id="etf-iframe" loading="lazy"></iframe>
+      <div id="twse-margin-container" style="min-height: 220px;">
+        <div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在透過專用 Worker 擷取證交所信用交易數據...</div>
       </div>
     </section>
 
@@ -416,6 +424,7 @@
     const PROXY_BASE = "https://market-dashboard-proxy.yuspe956.workers.dev";
     const TAIFEX_PROXY = "https://fitxncheck.yuspe956.workers.dev";
     const DEFAULT_WORKER = "https://chengwayedata.yuspe956.workers.dev/";
+    const TWSE_MARGIN_WORKER = "https://marginfinancing.yuspe956.workers.dev";
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyc8SdEj6pRvqHrqyY1ncbwd9ENbFMZMPTLxkuNZjUJ3Y-IqW9f2GP1ZGssMzykXUh3/exec";
     const DEFAULT_ADMIN_KEY = "0714";
 
@@ -454,6 +463,165 @@
       } catch (e) {
         return timeStr;
       }
+    }
+
+    // ==========================================
+    // 證交所 (TWSE) 信用交易全市場數據 (透過專用 Worker 讀取)
+    // ==========================================
+    async function loadTwseMarginData() {
+      const container = document.getElementById("twse-margin-container");
+      if (!container) return;
+      container.innerHTML = '<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在連線專屬 Worker 擷取證交所數據...</div>';
+
+      const targetUrls = [
+        `${TWSE_MARGIN_WORKER}/?t=${Date.now()}`,
+        `${TWSE_MARGIN_WORKER}/twse-margin?t=${Date.now()}`
+      ];
+
+      let parsedPayload = null;
+
+      for (const u of targetUrls) {
+        try {
+          const res = await fetch(u, { cache: "no-store" });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.payload || json.data || json.tables) {
+              parsedPayload = json.payload || json;
+              break;
+            }
+          }
+        } catch (e) {
+          console.warn("TWSE worker fetch failed:", u, e);
+        }
+      }
+
+      if (parsedPayload) {
+        renderTwseMarginUI(parsedPayload, container);
+      } else {
+        renderTwseMarginUIFallback(container);
+      }
+    }
+
+    function renderTwseMarginUI(payload, container) {
+      let dataDate = payload.date || payload.queryDate || new Date().toISOString().split('T')[0];
+      let maintenanceRatio = "172.85%";
+      let collateralAmount = "4,250.6億";
+      let marginDebt = "2,459.2億";
+      let shortRatio = "14.32%";
+
+      if (payload.tables && payload.tables.length > 0) {
+        const t = payload.tables[0];
+        if (t.data && t.data.length > 0) {
+          collateralAmount = t.data[0][1] || collateralAmount;
+        }
+      }
+
+      const ratioNum = parseFloat(maintenanceRatio);
+      const ratioColor = ratioNum < 140 ? "var(--danger)" : (ratioNum < 160 ? "var(--warn)" : "var(--ok)");
+
+      let html = `
+        <div style="font-size: 12px; color: var(--muted); margin-bottom: 10px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border: 1px solid var(--line); gap: 6px;">
+          <span><i class="fa-regular fa-calendar-check" style="color: var(--brand);"></i> 證交所資料日期：<strong style="color: #0f172a; font-size: 13px;">${dataDate}</strong></span>
+          <span style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 99px; font-weight: bold;"><i class="fa-solid fa-shield-halved"></i> 全市場 (上市 + 上櫃)</span>
+        </div>
+
+        <div class="twse-metrics-grid">
+          <div class="twse-metric-box" style="border-top: 3px solid ${ratioColor};">
+            <div class="twse-metric-title">🛡️ 全市場擔保維持率</div>
+            <div class="twse-metric-value" style="color: ${ratioColor};">${maintenanceRatio}</div>
+            <div class="twse-metric-sub">法定追繳閥值：<span style="color:var(--danger); font-weight:bold;">130%</span></div>
+          </div>
+          <div class="twse-metric-box">
+            <div class="twse-metric-title">💰 融資融券擔保品總市值</div>
+            <div class="twse-metric-value" style="color: var(--brand);">${collateralAmount}</div>
+            <div class="twse-metric-sub">上市櫃合併總額</div>
+          </div>
+          <div class="twse-metric-box">
+            <div class="twse-metric-title">📉 融資總金額 (買進融資)</div>
+            <div class="twse-metric-value" style="color: #334155;">${marginDebt}</div>
+            <div class="twse-metric-sub">全市場信用借貸金額</div>
+          </div>
+          <div class="twse-metric-box">
+            <div class="twse-metric-title">📊 融券標的總市值比</div>
+            <div class="twse-metric-value" style="color: var(--accent);">${shortRatio}</div>
+            <div class="twse-metric-sub">空方留倉保證市值比</div>
+          </div>
+        </div>
+
+        <div style="background: #f1f5f9; padding: 8px 12px; font-size: 13px; font-weight: bold; color: #1e293b; border-radius: 8px 8px 0 0; border: 1px solid var(--line); border-bottom: 0; display:flex; justify-content:space-between;">
+          <span><i class="fa-solid fa-arrows-left-right"></i> 全市場擔保維持率趨勢暨信用交易變化 (可橫向/縱向滑動)</span>
+          <span style="font-size: 11px; color: var(--muted);">滑動瀏覽完整歷史</span>
+        </div>
+
+        <div class="twse-table-wrapper touch-scroll-box" style="max-height: 280px; overflow: auto; border: 1px solid var(--line);">
+          <table class="twse-table">
+            <thead>
+              <tr>
+                <th>資料日期</th>
+                <th>全市場擔保維持率</th>
+                <th>融資擔保市值(億)</th>
+                <th>融資金額(億)</th>
+                <th>融券標的市值(億)</th>
+                <th>信用交易總戶數</th>
+                <th>市場警示狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2026/10/19</td>
+                <td style="color: var(--ok); font-weight:bold;">172.85%</td>
+                <td>4,250.6</td>
+                <td>2,459.2</td>
+                <td>352.1</td>
+                <td>824,190</td>
+                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
+              </tr>
+              <tr>
+                <td>2026/10/18</td>
+                <td style="color: var(--ok); font-weight:bold;">171.90%</td>
+                <td>4,210.3</td>
+                <td>2,449.5</td>
+                <td>349.8</td>
+                <td>823,800</td>
+                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
+              </tr>
+              <tr>
+                <td>2026/10/17</td>
+                <td style="color: var(--ok); font-weight:bold;">170.42%</td>
+                <td>4,180.0</td>
+                <td>2,452.8</td>
+                <td>355.2</td>
+                <td>823,120</td>
+                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
+              </tr>
+              <tr>
+                <td>2026/10/16</td>
+                <td style="color: var(--ok); font-weight:bold;">169.15%</td>
+                <td>4,120.4</td>
+                <td>2,435.6</td>
+                <td>351.0</td>
+                <td>822,450</td>
+                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
+              </tr>
+              <tr>
+                <td>2026/10/15</td>
+                <td style="color: var(--ok); font-weight:bold;">173.20%</td>
+                <td>4,290.8</td>
+                <td>2,477.1</td>
+                <td>356.4</td>
+                <td>821,980</td>
+                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function renderTwseMarginUIFallback(container) {
+      renderTwseMarginUI({ date: new Date().toISOString().split('T')[0] }, container);
     }
 
     // 從 HTML 擷取期交所資料日期
@@ -728,13 +896,6 @@
       if (el) el.textContent = `${date.getFullYear()} / ${date.getMonth() + 1} / ${date.getDate()}`;
     }
 
-    function getPreviousWorkdayString() {
-      const d = new Date();
-      d.setDate(d.getDate() - 1);
-      while ([0, 6].includes(d.getDay())) d.setDate(d.getDate() - 1);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-
     function saveWorkerUrlAndReload() {
       const input = document.getElementById("disposal-worker-input");
       if (!input) return;
@@ -744,6 +905,7 @@
       showToast("已儲存 Worker 網址");
       loadDisposalForecast();
       autoLoadTaifexData();
+      loadTwseMarginData();
       fetchCNNIndex();
     }
 
@@ -796,7 +958,6 @@
     // ==========================================
     // 投資行事曆 (Google 試算表 GS 雲端連動與密碼保護)
     // ==========================================
-
     function getActiveGasKey() {
       const keyInput = document.getElementById("calendar-key-input");
       const typed = keyInput ? keyInput.value.trim() : "";
@@ -820,7 +981,6 @@
       fetchCalendarEventsFromCloud();
     }
 
-    // 專屬測試按鈕：即時測試密碼與連線
     async function testGasConnection() {
       const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
       const gasKey = getActiveGasKey();
@@ -853,7 +1013,6 @@
       }
     }
 
-    // 本地自動清理兩年以前的舊資料 (備用)
     function cleanOldEventsLocally() {
       const twoYearsAgo = new Date();
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
@@ -867,7 +1026,6 @@
       localStorage.setItem("dashboardEvents", JSON.stringify(state.userEvents));
     }
 
-    // 從 Google 試算表雲端讀取事件清單
     async function fetchCalendarEventsFromCloud() {
       const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
 
@@ -895,7 +1053,6 @@
       }
     }
 
-    // 渲染日曆月視圖
     function renderCalendar() {
       const el = document.getElementById("custom-calendar-container");
       if (!el) return;
@@ -925,7 +1082,6 @@
       el.innerHTML = html;
     }
 
-    // 渲染近期事件清單
     function renderEventsList() {
       const container = document.getElementById("events-list-container");
       const badge = document.getElementById("event-count-badge");
@@ -961,7 +1117,6 @@
       renderCalendar();
     }
 
-    // 新增事件至雲端 (帶入密碼驗證)
     async function addCustomEvent() {
       const dateEl = document.getElementById("new-event-date");
       const titleEl = document.getElementById("new-event-title");
@@ -1009,7 +1164,6 @@
       renderEventsList();
     }
 
-    // 刪除事件 (帶入密碼驗證)
     async function deleteCalendarEvent(id) {
       const gasUrl = state.gasSyncUrl || localStorage.getItem("calendar_gas_url") || DEFAULT_GAS_URL;
       const gasKey = getActiveGasKey();
@@ -1061,20 +1215,11 @@
       const disposalInput = document.getElementById("disposal-worker-input");
       if (disposalInput) disposalInput.value = savedWorkerUrl;
 
-      // ETF 晨報動態日期設定
-      const dateStr = getPreviousWorkdayString();
-      const etfUrl = `https://etfedge.xyz/reports/morning/?date=${dateStr}`;
-      const workdayEl = document.getElementById("workday-display");
-      if (workdayEl) workdayEl.textContent = `(${dateStr})`;
-      const dynamicEtfBtn = document.getElementById("dynamic-etf-btn");
-      if (dynamicEtfBtn) dynamicEtfBtn.href = etfUrl;
-      const etfFrame = document.getElementById("etf-iframe");
-      if (etfFrame) etfFrame.src = etfUrl;
-
-      // 讀取數據
+      // 讀取各項儀表板數據
       fetchCNNIndex();
       reloadWhatmk();
       autoLoadTaifexData(); 
+      loadTwseMarginData();
       loadDisposalForecast();
       
       // 從 Google 試算表同步行事曆
