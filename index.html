@@ -157,7 +157,7 @@
 
     .status { color: var(--muted); text-align: center; padding: 24px 8px; font-size: 14px; }
 
-    /* --- 期交所數據樣式 --- */
+    /* --- 期交所與證交所數據樣式 --- */
     .taifex-metrics-grid, .twse-metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -327,10 +327,10 @@
       </div>
     </section>
 
-    <!-- Card 7: 證交所 信用交易 (全市場融資融券與擔保維持率) 取代原本 ETF 晨報 -->
+    <!-- Card 7: 證交所 信用交易 (全市場融資融券與融資增減) 取代原本 ETF 晨報 -->
     <section class="card card-large">
       <h3>
-        <span><i class="fa-solid fa-scale-balanced" style="color: var(--brand);"></i> 證交所 信用交易 (全市場擔保維持率與融資融券)</span>
+        <span><i class="fa-solid fa-scale-balanced" style="color: var(--brand);"></i> 證交所 信用交易 (全市場融資增減與擔保維持率)</span>
       </h3>
       <div class="btn-group">
         <a class="btn accent btn-sm" href="https://www.twse.com.tw/dashboard/zh/credit/margin.html" target="_blank">
@@ -375,7 +375,6 @@
         </span>
       </h3>
 
-      <!-- Google Apps Script 網址與專屬管理密碼設定區塊 -->
       <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 12px;">
         <div style="font-weight: bold; margin-bottom: 6px; color: #334155; display:flex; justify-content:space-between; align-items:center;">
           <span><i class="fa-brands fa-google-drive" style="color: #10b981;"></i> Google Apps Script (GS) 雲端連線設定：</span>
@@ -395,7 +394,6 @@
         </div>
       </div>
 
-      <!-- 新增事件表單 -->
       <div class="form-row">
         <input type="date" id="new-event-date" />
         <input type="text" id="new-event-title" placeholder="新增投資事件 (如: 輝達財報、聯準會降息、CPI 公布)" style="flex: 1;" />
@@ -404,10 +402,8 @@
         </button>
       </div>
 
-      <!-- 日曆月視圖 -->
       <div id="custom-calendar-container" class="calendar-wrapper"></div>
 
-      <!-- 近期與未來事件管理清單 -->
       <div style="margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff;">
         <div style="background: #f1f5f9; padding: 8px 12px; font-size: 13px; font-weight: bold; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
           <span><i class="fa-solid fa-list-check"></i> 近期與未來事件清單</span>
@@ -445,7 +441,7 @@
 
     function formatTNum(num) { 
       if (num === undefined || num === null || isNaN(num)) return "0";
-      return (num > 0 ? "+" : "") + num.toLocaleString(); 
+      return (num > 0 ? "+" : "") + Number(num).toLocaleString(); 
     }
 
     function getTColorClass(num, isBg = false) {
@@ -466,27 +462,27 @@
     }
 
     // ==========================================
-    // 證交所 (TWSE) 信用交易全市場數據 (透過專用 Worker 讀取)
+    // 證交所 (TWSE) 信用交易全市場數據 (含融資增減)
     // ==========================================
     async function loadTwseMarginData() {
       const container = document.getElementById("twse-margin-container");
       if (!container) return;
-      container.innerHTML = '<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在連線專屬 Worker 擷取證交所數據...</div>';
+      container.innerHTML = '<div class="status"><i class="fa-solid fa-spinner fa-spin"></i> 正在連線專屬 Worker 擷取證交所即時信用交易數據...</div>';
 
       const targetUrls = [
         `${TWSE_MARGIN_WORKER}/?t=${Date.now()}`,
         `${TWSE_MARGIN_WORKER}/twse-margin?t=${Date.now()}`
       ];
 
-      let parsedPayload = null;
+      let parsedData = null;
 
       for (const u of targetUrls) {
         try {
           const res = await fetch(u, { cache: "no-store" });
           if (res.ok) {
             const json = await res.json();
-            if (json.payload || json.data || json.tables) {
-              parsedPayload = json.payload || json;
+            if (json && (json.summary || json.payload)) {
+              parsedData = json;
               break;
             }
           }
@@ -495,122 +491,99 @@
         }
       }
 
-      if (parsedPayload) {
-        renderTwseMarginUI(parsedPayload, container);
+      if (parsedData && parsedData.summary && parsedData.summary.marginBalance > 0) {
+        renderTwseMarginUI(parsedData, container);
       } else {
-        renderTwseMarginUIFallback(container);
+        container.innerHTML = `
+          <div style="background:#fff5f5; border:1px solid #feb2b2; border-radius:8px; padding:16px; text-align:center; font-size:13px;">
+            <p style="color:#c53030; font-weight:bold; margin:0 0 8px;"><i class="fa-solid fa-triangle-exclamation"></i> 證交所信用交易資料讀取中或盤後尚未彙整</p>
+            <p style="color:#718096; margin:0 0 12px;">每日信用交易資料由授信機構於 21:00 前完成彙整公布。</p>
+            <button class="btn accent btn-sm" onclick="loadTwseMarginData()"><i class="fa-solid fa-rotate"></i> 重新載入</button>
+          </div>`;
       }
     }
 
-    function renderTwseMarginUI(payload, container) {
-      let dataDate = payload.date || payload.queryDate || new Date().toISOString().split('T')[0];
-      let maintenanceRatio = "172.85%";
-      let collateralAmount = "4,250.6億";
-      let marginDebt = "2,459.2億";
-      let shortRatio = "14.32%";
+    function renderTwseMarginUI(resData, container) {
+      const summary = resData.summary || {};
+      const payload = resData.payload || {};
 
-      if (payload.tables && payload.tables.length > 0) {
-        const t = payload.tables[0];
-        if (t.data && t.data.length > 0) {
-          collateralAmount = t.data[0][1] || collateralAmount;
-        }
-      }
+      let dataDate = summary.date || payload.date || new Date().toISOString().split('T')[0];
+      
+      // 融資真實數值 (單位：億元)
+      let marginBalance = summary.marginBalance || 0;
+      let marginDiff = summary.marginDiff || 0;
+      let marginBuy = summary.marginBuy || 0;
+      let marginSell = summary.marginSell || 0;
+      let marginRepay = summary.marginCashRepay || 0;
 
+      // 維持率欄位：若無官方直報則呈現即時狀態，不再顯示寫死的 172.85%
+      let maintenanceRatio = summary.maintenanceRatio && summary.maintenanceRatio !== "--" ? summary.maintenanceRatio : "依官方每日結算為準";
       const ratioNum = parseFloat(maintenanceRatio);
-      const ratioColor = ratioNum < 140 ? "var(--danger)" : (ratioNum < 160 ? "var(--warn)" : "var(--ok)");
+      const ratioColor = !isNaN(ratioNum) ? (ratioNum < 140 ? "var(--danger)" : (ratioNum < 160 ? "var(--warn)" : "var(--ok)")) : "var(--brand)";
 
       let html = `
         <div style="font-size: 12px; color: var(--muted); margin-bottom: 10px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border: 1px solid var(--line); gap: 6px;">
           <span><i class="fa-regular fa-calendar-check" style="color: var(--brand);"></i> 證交所資料日期：<strong style="color: #0f172a; font-size: 13px;">${dataDate}</strong></span>
-          <span style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 99px; font-weight: bold;"><i class="fa-solid fa-shield-halved"></i> 全市場 (上市 + 上櫃)</span>
+          <span style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 99px; font-weight: bold;"><i class="fa-solid fa-bolt"></i> 每日信用交易彙總即時動態</span>
         </div>
 
         <div class="twse-metrics-grid">
-          <div class="twse-metric-box" style="border-top: 3px solid ${ratioColor};">
-            <div class="twse-metric-title">🛡️ 全市場擔保維持率</div>
-            <div class="twse-metric-value" style="color: ${ratioColor};">${maintenanceRatio}</div>
-            <div class="twse-metric-sub">法定追繳閥值：<span style="color:var(--danger); font-weight:bold;">130%</span></div>
+          <!-- 1. 融資單日增減 (核心指標) -->
+          <div class="twse-metric-box" style="border-top: 3px solid ${marginDiff >= 0 ? 'var(--danger)' : 'var(--ok)'};">
+            <div class="twse-metric-title">🔥 融資今日單日增減</div>
+            <div class="twse-metric-value ${getTColorClass(marginDiff)}">${formatTNum(marginDiff)} 億</div>
+            <div class="twse-metric-sub">${marginDiff >= 0 ? '槓桿擴大 (融資增加)' : '浮額清洗 (融資減少)'}</div>
           </div>
+
+          <!-- 2. 今日融資餘額 (留倉總額) -->
           <div class="twse-metric-box">
-            <div class="twse-metric-title">💰 融資融券擔保品總市值</div>
-            <div class="twse-metric-value" style="color: var(--brand);">${collateralAmount}</div>
-            <div class="twse-metric-sub">上市櫃合併總額</div>
+            <div class="twse-metric-title">📉 融資留倉總餘額</div>
+            <div class="twse-metric-value" style="color: #1e293b;">${marginBalance.toLocaleString()} 億</div>
+            <div class="twse-metric-sub">現金償還：${marginRepay.toLocaleString()} 億</div>
           </div>
+
+          <!-- 3. 融資買進金額 -->
           <div class="twse-metric-box">
-            <div class="twse-metric-title">📉 融資總金額 (買進融資)</div>
-            <div class="twse-metric-value" style="color: #334155;">${marginDebt}</div>
-            <div class="twse-metric-sub">全市場信用借貸金額</div>
+            <div class="twse-metric-title">📈 今日融資買進</div>
+            <div class="twse-metric-value" style="color: var(--danger);">${marginBuy.toLocaleString()} 億</div>
+            <div class="twse-metric-sub">市場信用做多動能</div>
           </div>
+
+          <!-- 4. 融資賣出金額 -->
           <div class="twse-metric-box">
-            <div class="twse-metric-title">📊 融券標的總市值比</div>
-            <div class="twse-metric-value" style="color: var(--accent);">${shortRatio}</div>
-            <div class="twse-metric-sub">空方留倉保證市值比</div>
+            <div class="twse-metric-title">📉 今日融資賣出</div>
+            <div class="twse-metric-value" style="color: var(--ok);">${marginSell.toLocaleString()} 億</div>
+            <div class="twse-metric-sub">市場信用獲利/停損</div>
           </div>
         </div>
 
-        <div style="background: #f1f5f9; padding: 8px 12px; font-size: 13px; font-weight: bold; color: #1e293b; border-radius: 8px 8px 0 0; border: 1px solid var(--line); border-bottom: 0; display:flex; justify-content:space-between;">
-          <span><i class="fa-solid fa-arrows-left-right"></i> 全市場擔保維持率趨勢暨信用交易變化 (可橫向/縱向滑動)</span>
-          <span style="font-size: 11px; color: var(--muted);">滑動瀏覽完整歷史</span>
+        <div style="background: #f1f5f9; padding: 8px 12px; font-size: 13px; font-weight: bold; color: #1e293b; border-radius: 8px 8px 0 0; border: 1px solid var(--line); border-bottom: 0; display:flex; justify-content:space-between; align-items:center;">
+          <span><i class="fa-solid fa-table-list"></i> 今日信用交易統計明細 (真實動態數據)</span>
+          <span style="font-size: 11px; color: var(--muted);"><i class="fa-solid fa-arrows-left-right"></i> 可左右滑動</span>
         </div>
 
-        <div class="twse-table-wrapper touch-scroll-box" style="max-height: 280px; overflow: auto; border: 1px solid var(--line);">
+        <div class="twse-table-wrapper touch-scroll-box" style="max-height: 290px; overflow: auto; border: 1px solid var(--line);">
           <table class="twse-table">
             <thead>
               <tr>
-                <th>資料日期</th>
-                <th>全市場擔保維持率</th>
-                <th>融資擔保市值(億)</th>
-                <th>融資金額(億)</th>
-                <th>融券標的市值(億)</th>
-                <th>信用交易總戶數</th>
-                <th>市場警示狀態</th>
+                <th>交易項目</th>
+                <th style="background:#0f172a; color:#fef08a;">單日增減 (億元)</th>
+                <th>今日餘額 (億元)</th>
+                <th>買進 (億元)</th>
+                <th>賣出 (億元)</th>
+                <th>現金/現券償還 (億元)</th>
+                <th>狀態判定</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>2026/10/19</td>
-                <td style="color: var(--ok); font-weight:bold;">172.85%</td>
-                <td>4,250.6</td>
-                <td>2,459.2</td>
-                <td>352.1</td>
-                <td>824,190</td>
-                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
-              </tr>
-              <tr>
-                <td>2026/10/18</td>
-                <td style="color: var(--ok); font-weight:bold;">171.90%</td>
-                <td>4,210.3</td>
-                <td>2,449.5</td>
-                <td>349.8</td>
-                <td>823,800</td>
-                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
-              </tr>
-              <tr>
-                <td>2026/10/17</td>
-                <td style="color: var(--ok); font-weight:bold;">170.42%</td>
-                <td>4,180.0</td>
-                <td>2,452.8</td>
-                <td>355.2</td>
-                <td>823,120</td>
-                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
-              </tr>
-              <tr>
-                <td>2026/10/16</td>
-                <td style="color: var(--ok); font-weight:bold;">169.15%</td>
-                <td>4,120.4</td>
-                <td>2,435.6</td>
-                <td>351.0</td>
-                <td>822,450</td>
-                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
-              </tr>
-              <tr>
-                <td>2026/10/15</td>
-                <td style="color: var(--ok); font-weight:bold;">173.20%</td>
-                <td>4,290.8</td>
-                <td>2,477.1</td>
-                <td>356.4</td>
-                <td>821,980</td>
-                <td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:11px;">安全正常</span></td>
+                <td style="font-weight:bold; color:var(--brand);">融資金額 (信用買進)</td>
+                <td class="${getTColorClass(marginDiff)}" style="font-weight:bold;">${formatTNum(marginDiff)}</td>
+                <td style="font-weight:bold;">${marginBalance.toLocaleString()}</td>
+                <td>${marginBuy.toLocaleString()}</td>
+                <td>${marginSell.toLocaleString()}</td>
+                <td>${marginRepay.toLocaleString()}</td>
+                <td><span style="background:${marginDiff >= 0 ? '#fef2f2' : '#f0fdf4'}; color:${marginDiff >= 0 ? '#b91c1c' : '#15803d'}; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">${marginDiff >= 0 ? '融資浮額增加' : '融資浮額清洗'}</span></td>
               </tr>
             </tbody>
           </table>
@@ -621,10 +594,22 @@
     }
 
     function renderTwseMarginUIFallback(container) {
-      renderTwseMarginUI({ date: new Date().toISOString().split('T')[0] }, container);
+      renderTwseMarginUI({
+        summary: {
+          date: new Date().toISOString().split('T')[0],
+          marginBalance: 2459.2,
+          marginDiff: 12.35,
+          marginBuy: 145.8,
+          marginSell: 131.2,
+          marginCashRepay: 2.25,
+          maintenanceRatio: "172.85%"
+        }
+      }, container);
     }
 
-    // 從 HTML 擷取期交所資料日期
+    // ==========================================
+    // 期交所三大法人未平倉與增減
+    // ==========================================
     function extractTaifexDateFromHtml(htmlText) {
       if (!htmlText) return "";
       const match = htmlText.match(/日期\s*[:：]?\s*(\d{4}[\/\.-]\d{2}[\/\.-]\d{2})/i) || 
@@ -633,7 +618,6 @@
       return match ? match[1] : "";
     }
 
-    // 解析期交所 HTML 表格數據
     function parseTaifexHtml(htmlText) {
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
       let currentProduct = "";
@@ -667,7 +651,6 @@
       return data;
     }
 
-    // 渲染期交所表格
     function renderTaifexTable(data, container, dataDate, fetchTime) {
       const txForeign = data.find(d => d.product === '臺股期貨' && d.identity === '外資') || { oiNetVol: 0, tradeNetVol: 0 };
       const mtxForeign = data.find(d => d.product === '小型臺指期貨' && d.identity === '外資') || { oiNetVol: 0, tradeNetVol: 0 };
@@ -741,7 +724,6 @@
       container.innerHTML = html;
     }
 
-    // 自動加載期交所資料
     async function autoLoadTaifexData() {
       const container = document.getElementById("taifex-auto-container");
       if (!container) return;
@@ -830,7 +812,6 @@
         </div>`;
     }
 
-    // 多源加載 CNN 指數
     async function fetchCNNIndex() {
       const controls = document.getElementById("cnn-controls");
       if (controls) controls.innerHTML = "";
